@@ -26,7 +26,6 @@ Chaque utilisateur ayant un compte Back-office a la possibilité de créer et g�
 
 ## Déploiement
 
-Le fichier de certificat 'cacert.pem' doit se trouver dans le même dossier que la librairie php.	
 La librairie doit être inclue dans votre code PHP avant tout appel aux classes et méthodes du client
 
 	include_once 'kiubi_api_dbo_client.php';

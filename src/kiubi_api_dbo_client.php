@@ -93,7 +93,6 @@ class Kiubi_API_DBO_Client {
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
 		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
-		curl_setopt($curl, CURLOPT_CAINFO, dirname(__FILE__).'/cacert.pem');
 		
 		$headers = (array) $addionnal_headers;
 		$headers['X-API'] = 'Kiubi API PHP Client v'.self::version;
