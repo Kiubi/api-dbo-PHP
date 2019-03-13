@@ -3,18 +3,18 @@
  * Kiubi Client API Developers
  * @category Kiubi
  * @package  API_DBO
- * @copyright Copyright (c) Troll d'idées 2013. Tous droits réservés.
+ * @copyright Copyright (c) Kiubi 2019
  */
 
 class Kiubi_API_DBO_Client {
 	
-	const version			= '1.0';
-	const api_url			= 'https://api.kiubi.com';
-	const api_version		= 'v1';
-	private $access_token	= '';
-	private $rate_remaining	= 0;
-	protected $timeout		= 3;
-
+	protected $version			= '1.1';
+	protected $api_url			= 'https://api.kiubi.com';
+	protected $api_version		= 'v1';
+	protected $access_token		= '';
+	protected $rate_remaining	= 0;
+	protected $timeout			= 3;
+	
 	/**
 	 * Kiubi_API_DBO_Client 
 	 * @param String $access_token
@@ -45,15 +45,15 @@ class Kiubi_API_DBO_Client {
 	 * @param String $endpoint
 	 * @param Array $params
 	 * @param Array $addionnal_headers
-	 * @return Kiubi_API_DBO_Client_Response|Kiubi_API_DBO_Client_Response_Xml
+	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function query($method, $endpoint, $params = array(), $addionnal_headers = array()) {
 		
 		$endpoint = ltrim($endpoint, '/');		
-		if(substr($endpoint, 0, strlen(self::api_version)+1)!=self::api_version.'/') {
-			$endpoint = self::api_version.'/'.$endpoint;
+		if(substr($endpoint, 0, strlen($this->api_version)+1)!=$this->api_version.'/') {
+			$endpoint = $this->api_version.'/'.$endpoint;
 		}
-		list($headers, $content) = $this->performQuery($method, self::api_url.'/'.$endpoint, $params, $addionnal_headers);		
+		list($headers, $content) = $this->performQuery($method, $this->api_url.'/'.$endpoint, $params, $addionnal_headers);		
 		switch($headers['Content-Type']) {			
 			default:
 			case 'application/json':
@@ -95,7 +95,7 @@ class Kiubi_API_DBO_Client {
 		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
 		
 		$headers = (array) $addionnal_headers;
-		$headers['X-API'] = 'Kiubi API PHP Client v'.self::version;
+		$headers['X-API'] = 'Kiubi API PHP Client v'.$this->version;
 		if($this->access_token) {
 			$headers['Authorization'] = 'token '.$this->access_token;
 		}
@@ -125,7 +125,7 @@ class Kiubi_API_DBO_Client {
 		$headers = array();
 		foreach(explode("\r\n", $header) as $h) {
 			if(strlen($h)) {
-				@list($name, $value) = explode(':', $h);
+				list($name, $value) = explode(':', $h);
 				$headers[trim($name)] = trim($value);
 			}
 		}
@@ -407,19 +407,24 @@ class Kiubi_API_DBO_Client_Response {
 	 * @param String $content
 	 */
 	public function __construct($headers, $content) {
+		
 		$this->headers = $headers;
-		if($content == '') {
-			$this->meta['success'] = false;
-		} else {		
-			$content = json_decode($content, true);
-			if(!is_array($content)) {
-				$this->meta['success'] = false;
-			} else {
-				$this->error = $content['error'];
-				$this->meta = $content['meta'];
-				$this->data = $content['data'];
+		reset($headers);
+		$http_code = key($headers);
+		if(preg_match("=^HTTP/[\d].[\d] ([\d]+) =", $http_code, $regs)) {
+			if($regs[1] == '500') {
+				$this->meta = array(
+					'success' => false,
+					'status_code'=>500
+				);
+				return;
 			}
 		}
+	
+		$content = json_decode($content, true);
+		$this->error = $content['error'];
+		$this->meta = $content['meta'];
+		$this->data = $content['data'];
 	}
 	
 	/**
