@@ -8,7 +8,7 @@
 
 class Kiubi_API_DBO_Client {
 	
-	protected $version			= '1.1';
+	protected $version			= '1.2';
 	protected $api_url			= 'https://api.kiubi.com';
 	protected $api_version		= 'v1';
 	protected $access_token		= '';
@@ -54,13 +54,14 @@ class Kiubi_API_DBO_Client {
 			$endpoint = $this->api_version.'/'.$endpoint;
 		}
 		list($headers, $content) = $this->performQuery($method, $this->api_url.'/'.$endpoint, $params, $addionnal_headers);		
-		switch($headers['Content-Type']) {			
+		$ct = isset($headers['Content-Type']) ? $headers['Content-Type'] : '';
+		switch($ct) {			
 			default:
 			case 'application/json':
 				$response = $this->getJsonResponse($headers, $content);
 				if($response instanceof Kiubi_API_DBO_Client_Response) {
 					$meta = $response->getMeta();
-					$this->rate_remaining = $meta['rate_remaining'];
+					$this->rate_remaining = isset($meta['rate_remaining']) ? $meta['rate_remaining'] : 0;
 				}
 				return $response;
 			break;
@@ -125,8 +126,14 @@ class Kiubi_API_DBO_Client {
 		$headers = array();
 		foreach(explode("\r\n", $header) as $h) {
 			if(strlen($h)) {
-				list($name, $value) = explode(':', $h);
-				$headers[trim($name)] = trim($value);
+				if(strlen($h) == 0) {
+					continue;
+				}
+				$h = explode(':', $h, 2);
+				if (count($h) != 2) {
+					continue;
+				}
+				$headers[trim($h[0])] = trim($h[1]);
 			}
 		}
 		return array($headers, $content);
@@ -241,7 +248,7 @@ class Kiubi_API_DBO_Client {
 	 * @param String $endpoint
 	 * @param Array $params
 	 * @param Array $addionnal_headers
-	 * @return Object
+	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function get($endpoint, $params = array(), $addionnal_headers = array()) {
 		return $this->query('GET', $endpoint, $params, $addionnal_headers);
@@ -252,7 +259,7 @@ class Kiubi_API_DBO_Client {
 	 * @param String $endpoint
 	 * @param Array $params
 	 * @param Array $addionnal_headers
-	 * @return Object
+	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function post($endpoint, $params = array(), $addionnal_headers = array()) {
 		return $this->query('POST', $endpoint, $params, $addionnal_headers);
@@ -263,7 +270,7 @@ class Kiubi_API_DBO_Client {
 	 * @param String $endpoint
 	 * @param Array $params
 	 * @param Array $addionnal_headers
-	 * @return Object
+	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function put($endpoint, $params = array(), $addionnal_headers = array()) {
 		return $this->query('PUT', $endpoint, $params, $addionnal_headers);
@@ -274,7 +281,7 @@ class Kiubi_API_DBO_Client {
 	 * @param String $endpoint
 	 * @param Array $params
 	 * @param Array $addionnal_headers
-	 * @return Object
+	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function delete($endpoint, $params = array(), $addionnal_headers = array()) {
 		return $this->query('DELETE', $endpoint, $params, $addionnal_headers);
@@ -298,13 +305,13 @@ class Kiubi_API_DBO_Client {
 	
 	/**
 	 * Determine if a request got a next page result
-	 * @param Object $response
+	 * @param Kiubi_API_DBO_Client_Response $response
 	 * @return boolean
 	 */
 	public function hasNextPage($response) {
 		if($response instanceof Kiubi_API_DBO_Client_Response) {
 			$meta = $response->getMeta();
-			if(isset($meta['link']) && $meta['link']['next_page']) {
+			if(isset($meta['link']) && isset($meta['link']['next_page']) && $meta['link']['next_page']) {
 				return true;
 			}
 		}
@@ -313,7 +320,7 @@ class Kiubi_API_DBO_Client {
 	
 	/**
 	 * Determine if a request got a previous page result
-	 * @param Object $response
+	 * @param Kiubi_API_DBO_Client_Response $response
 	 * @return boolean
 	 */
 	public function hasPreviousPage($response) {
@@ -328,9 +335,9 @@ class Kiubi_API_DBO_Client {
 	
 	/**
 	 * Retrive a specific page of a resultset
-	 * @param Object $response
+	 * @param Kiubi_API_DBO_Client_Response $response
 	 * @param Integer $num
-	 * @return Object
+	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function getPage($response, $num) {
 		if($response instanceof Kiubi_API_DBO_Client_Response) {
@@ -344,8 +351,8 @@ class Kiubi_API_DBO_Client {
 
 	/**
 	 * Retrive next page of a resultset
-	 * @param Object $response
-	 * @return Object
+	 * @param Kiubi_API_DBO_Client_Response $response
+	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function getNextPage($response) {
 		return $this->getNavigationPage($response, 'next_page');
@@ -353,8 +360,8 @@ class Kiubi_API_DBO_Client {
 	
 	/**
 	 * Retrive previous page of a resultset
-	 * @param Object $response
-	 * @return Object
+	 * @param Kiubi_API_DBO_Client_Response $response
+	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function getPreviousPage($response) {
 		return $this->getNavigationPage($response, 'previous_page');
@@ -362,8 +369,8 @@ class Kiubi_API_DBO_Client {
 	
 	/**
 	 * Retrive first page of a resultset
-	 * @param Object $response
-	 * @return Object
+	 * @param Kiubi_API_DBO_Client_Response $response
+	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function getFirstPage($response) {
 		return $this->getNavigationPage($response, 'first_page');
@@ -371,8 +378,8 @@ class Kiubi_API_DBO_Client {
 	
 	/**
 	 * Retrive last page of a resultset
-	 * @param Object $response
-	 * @return Object
+	 * @param Kiubi_API_DBO_Client_Response $response
+	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function getLastPage($response) {
 		return $this->getNavigationPage($response, 'last_page');
@@ -380,8 +387,8 @@ class Kiubi_API_DBO_Client {
 	
 	/**
 	 * Perform a request on a page of a resultset
-	 * @param Object $response
-	 * @return Object
+	 * @param Kiubi_API_DBO_Client_Response $response
+	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	protected function getNavigationPage($response, $page) {
 		if($response instanceof Kiubi_API_DBO_Client_Response) {
@@ -422,9 +429,18 @@ class Kiubi_API_DBO_Client_Response {
 		}
 	
 		$content = json_decode($content, true);
-		$this->error = $content['error'];
-		$this->meta = $content['meta'];
-		$this->data = $content['data'];
+        
+        if (!is_array($content)) {
+			$this->meta = array(
+                'success' => false,
+                'status_code'=>500
+            );
+            return;
+		}
+        
+		$this->error = isset($content['error']) ? $content['error'] : array();
+		$this->meta = isset($content['meta']) ? $content['meta'] : array();
+		$this->data = isset($content['data']) ? $content['data'] : array();
 	}
 	
 	/**
