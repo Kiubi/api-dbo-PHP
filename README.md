@@ -1,11 +1,10 @@
 # Kiubi API Developers Back-office Client PHP
----
 
 ## Description
 
-La plateforme [Kiubi](http://www.kiubi.com) offre une [API](https://api.kiubi.com/console) permettant aux développeurs d'interconnecter la plateforme avec leurs applications. Cette API leur fournis un accès direct et sécurisé aux données de tous leurs sites.
+La plateforme [Kiubi](http://www.kiubi.com) fournit l'[API DBO](https://api.kiubi.com/console) aux développeurs afin d'interconnecter la plateforme avec leurs applications. Cette API leur fournis un accès direct et sécurisé aux données de tous leurs sites.
 
-L'API Kiubi est une API de type REST supportant le format JSON. Afin de faciliter son utilisation, Kiubi propose une librairie PHP complète permettant la récupération des données via l'API de façon simple et optimisé.
+L'API DBO de Kiubi est de type REST supportant le format JSON. Afin de faciliter son utilisation, Kiubi propose une librairie PHP complète permettant la récupération des données via l'API de façon simple et optimisé. Pour en savoir plus, vous pouvez [consulter la documentation en ligne](https://aide.kiubi.com/api-dev-generalites.html).
 
 
 ## Console
@@ -19,7 +18,7 @@ L'accès à la console est public mais l'exécution de requêtes nécessite un c
 ## Pré-requis
 
 - Un environnement pouvant exécuter du code PHP
-- PHP avec l'extension cURL
+- PHP avec l'extension cURL (PHP >= 5.4)
 - Une clé API valide
 
 Chaque utilisateur ayant un compte Back-office a la possibilité de créer et gérer ses clés API dans son profil utilisateur afin d'utiliser l'API DBO.
