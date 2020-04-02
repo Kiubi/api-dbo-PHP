@@ -8,8 +8,8 @@
 
 class Kiubi_API_DBO_Client {
 	
-	protected $version			= '1.2';
 	protected $api_url			= 'https://api.kiubi.com';
+	protected $version			= '1.3';
 	protected $api_version		= 'v1';
 	protected $access_token		= '';
 	protected $rate_remaining	= 0;
@@ -64,7 +64,6 @@ class Kiubi_API_DBO_Client {
 					$this->rate_remaining = isset($meta['rate_remaining']) ? $meta['rate_remaining'] : 0;
 				}
 				return $response;
-			break;
 		}
 	}
 	
@@ -114,15 +113,23 @@ class Kiubi_API_DBO_Client {
 		
 		curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
 		curl_setopt($curl, CURLOPT_HEADER, true);
-		curl_setopt($curl, CURLOPT_HTTPHEADER, $this->prepareHeaders($headers));		
-		
+		curl_setopt($curl, CURLOPT_HTTPHEADER, $this->prepareHeaders($headers));
+
 		$response = curl_exec($curl);
-		$header_size = curl_getinfo($curl,CURLINFO_HEADER_SIZE);
+
+		if ($response===false) {
+			$header = 'Content-Type: application/json';
+			$content = json_encode(array(
+				'meta'=>array('success'=>false,'status_code'=>500),
+				'error'=>array('code'=>5007,'message'=>curl_error($curl)), // 5007 == UNEXPECTED ERROR
+			)); // Mimic API Error
+		} else {
+			$header_size = curl_getinfo($curl,CURLINFO_HEADER_SIZE);
+			$header = substr($response, 0, $header_size);
+			$content = substr($response, $header_size);
+		}
 		curl_close($curl);
-		
-		$header = substr($response, 0, $header_size);
-        $content = substr($response, $header_size);
-		
+
 		$headers = array();
 		foreach(explode("\r\n", $header) as $h) {
 			if(strlen($h)) {
@@ -432,10 +439,15 @@ class Kiubi_API_DBO_Client_Response {
         
         if (!is_array($content)) {
 			$this->meta = array(
-                'success' => false,
-                'status_code'=>500
-            );
-            return;
+				'success' => false,
+				'status_code'=>500
+			);
+			$this->error = array(
+				'code' => 5007, // 5007 == UNEXPECTED ERROR
+				'message' => 'Unexpected error, payload not found in response'
+			);
+			$this->data = null;
+			return;
 		}
         
 		$this->error = isset($content['error']) ? $content['error'] : array();
@@ -503,7 +515,7 @@ class Kiubi_API_DBO_Client_Response {
 	}
  }
  
- class Kiubi_API_DBO_File {
+class Kiubi_API_DBO_File {
 	
 	private $path;
 	private $mime;
