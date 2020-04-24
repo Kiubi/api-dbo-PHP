@@ -9,7 +9,7 @@
 class Kiubi_API_DBO_Client {
 	
 	protected $api_url			= 'https://api.kiubi.com';
-	protected $version			= '1.3';
+	protected $version			= '1.4';
 	protected $api_version		= 'v1';
 	protected $access_token		= '';
 	protected $rate_remaining	= 0;
@@ -37,6 +37,24 @@ class Kiubi_API_DBO_Client {
 	 */
 	public function getAccessToken() {
 		return $this->access_token;
+	}
+
+	/**
+	 * Set connection timeout
+	 *
+	 * @param int $timeout
+	 */
+	public function setTimout($timeout) {
+		$this->timeout = (int) $timeout;
+	}
+
+	/**
+	 * Set API main URL. Default is https://api.kiubi.com
+	 *
+	 * @param string $api_url
+	 */
+	public function setUrl($api_url) {
+		$this->api_url = $api_url;
 	}
 
 	/**
@@ -344,7 +362,7 @@ class Kiubi_API_DBO_Client {
 	 * Retrive a specific page of a resultset
 	 * @param Kiubi_API_DBO_Client_Response $response
 	 * @param Integer $num
-	 * @return Kiubi_API_DBO_Client_Response
+	 * @return Kiubi_API_DBO_Client_Response|false
 	 */
 	public function getPage($response, $num) {
 		if($response instanceof Kiubi_API_DBO_Client_Response) {
@@ -395,7 +413,7 @@ class Kiubi_API_DBO_Client {
 	/**
 	 * Perform a request on a page of a resultset
 	 * @param Kiubi_API_DBO_Client_Response $response
-	 * @return Kiubi_API_DBO_Client_Response
+	 * @return Kiubi_API_DBO_Client_Response|false
 	 */
 	protected function getNavigationPage($response, $page) {
 		if($response instanceof Kiubi_API_DBO_Client_Response) {
