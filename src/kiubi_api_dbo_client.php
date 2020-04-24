@@ -9,12 +9,13 @@
 class Kiubi_API_DBO_Client {
 	
 	protected $api_url			= 'https://api.kiubi.com';
-	protected $version			= '1.4';
+	protected $version			= '1.5';
 	protected $api_version		= 'v1';
 	protected $access_token		= '';
 	protected $rate_remaining	= 0;
 	protected $timeout			= 3;
-	
+	protected $autoThrottling	= false;
+
 	/**
 	 * Kiubi_API_DBO_Client 
 	 * @param String $access_token
@@ -22,7 +23,16 @@ class Kiubi_API_DBO_Client {
 	public function __construct($access_token = '') {		
 		$this->setAccessToken($access_token);
 	}
-	
+
+	/**
+	 * Active ou désactive la gestion automatique des quotas
+	 *
+	 * @param boolean $enabled
+	 */
+	public function setAutoThrottling($enabled) {
+		$this->autoThrottling = (boolean) $enabled;
+	}
+
 	/**
 	 * Set access token
 	 * @param String $access_token
@@ -66,7 +76,16 @@ class Kiubi_API_DBO_Client {
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function query($method, $endpoint, $params = array(), $addionnal_headers = array()) {
-		
+
+		if ($endpoint !== 'rate' && $this->rate_remaining == 0 && $this->autoThrottling) {
+			do {
+				$remmaining = $this->getRateRemaining(true); // force check
+				if ($remmaining == 0) {
+					sleep(5);
+				}
+			} while($remmaining == 0);
+		}
+
 		$endpoint = ltrim($endpoint, '/');		
 		if(substr($endpoint, 0, strlen($this->api_version)+1)!=$this->api_version.'/') {
 			$endpoint = $this->api_version.'/'.$endpoint;
@@ -79,7 +98,7 @@ class Kiubi_API_DBO_Client {
 				$response = $this->getJsonResponse($headers, $content);
 				if($response instanceof Kiubi_API_DBO_Client_Response) {
 					$meta = $response->getMeta();
-					$this->rate_remaining = isset($meta['rate_remaining']) ? $meta['rate_remaining'] : 0;
+					$this->rate_remaining = isset($meta['rate_remaining']) ? (int) $meta['rate_remaining'] : 0;
 				}
 				return $response;
 		}
