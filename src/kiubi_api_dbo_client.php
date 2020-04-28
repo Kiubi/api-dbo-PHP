@@ -54,7 +54,7 @@ class Kiubi_API_DBO_Client {
 	 *
 	 * @param int $timeout
 	 */
-	public function setTimout($timeout) {
+	public function setTimeout($timeout) {
 		$this->timeout = (int) $timeout;
 	}
 
