@@ -9,7 +9,7 @@
 class Kiubi_API_DBO_Client {
 	
 	protected $api_url			= 'https://api.kiubi.com';
-	protected $version			= '1.5';
+	protected $version			= '1.6';
 	protected $api_version		= 'v1';
 	protected $access_token		= '';
 	protected $rate_remaining	= 0;
@@ -79,11 +79,11 @@ class Kiubi_API_DBO_Client {
 
 		if ($endpoint !== 'rate' && $this->rate_remaining == 0 && $this->autoThrottling) {
 			do {
-				$remmaining = $this->getRateRemaining(true); // force check
-				if ($remmaining == 0) {
+				$remaining = $this->getRateRemaining(true); // force check
+				if ($remaining == 0) {
 					sleep(5);
 				}
-			} while($remmaining == 0);
+			} while($remaining == 0);
 		}
 
 		$endpoint = ltrim($endpoint, '/');		
@@ -98,7 +98,7 @@ class Kiubi_API_DBO_Client {
 				$response = $this->getJsonResponse($headers, $content);
 				if($response instanceof Kiubi_API_DBO_Client_Response) {
 					$meta = $response->getMeta();
-					$this->rate_remaining = isset($meta['rate_remaining']) ? (int) $meta['rate_remaining'] : 0;
+					if (isset($meta['rate_remaining'])) $this->rate_remaining = (int) $meta['rate_remaining'];
 				}
 				return $response;
 		}
