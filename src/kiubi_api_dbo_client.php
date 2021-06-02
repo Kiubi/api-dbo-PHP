@@ -17,7 +17,7 @@ class Kiubi_API_DBO_Client {
 	protected $autoThrottling	= false;
 
 	/**
-	 * Kiubi_API_DBO_Client 
+	 * Constructor
 	 * @param String $access_token
 	 */
 	public function __construct($access_token = '') {		
@@ -71,8 +71,8 @@ class Kiubi_API_DBO_Client {
 	 * Build query
 	 * @param String $method
 	 * @param String $endpoint
-	 * @param Array $params
 	 * @param Array $addionnal_headers
+	 * @param array $params
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function query($method, $endpoint, $params = array(), $addionnal_headers = array()) {
@@ -106,7 +106,7 @@ class Kiubi_API_DBO_Client {
 	
 	/**
 	 * Return Json response
-	 * @param Array $headers
+	 * @param array $headers
 	 * @param String $content
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
@@ -118,9 +118,9 @@ class Kiubi_API_DBO_Client {
 	 * Perform query
 	 * @param String $method
 	 * @param String $url
-	 * @param Array $params
 	 * @param Array $addionnal_headers
-	 * @return Array[Array, String] Table of headers and content as string
+	 * @param array $params
+	 * @return array[array, String] Table of headers and content as string
 	 */
 	protected function performQuery($method, $url, $params = array(), $addionnal_headers = array()) {
 		
@@ -256,42 +256,42 @@ class Kiubi_API_DBO_Client {
 			"body" => $body,
 		);
 	}
-	
-    /**
-     * Converts multidimentional array of params in a simple array
-	 * 
-     * Brackets [] are added to keys which contains an array
-     *
-     * @param array $params
-     * @param string $prefix Prefix used for recursivity
-     * @return array
-     */
-    protected function flattenParams($params, $prefix = null)
-    { 
-        $flat_params = array();
 
-        foreach ($params as $name => $value) {
-			
-            if ($prefix) {
-                $name = $prefix . "[".(is_int($name) ? "" : $name)."]";
-            }
+	/**
+	 * Converts multidimensional array of params in a simple array
+	 *
+	 * Brackets [] are added to keys which contains an array
+	 *
+	 * @param array $params
+	 * @param string $prefix Prefix used for recursion
+	 * @return array
+	 */
+	protected function flattenParams($params, $prefix = null)
+	{
+		$flat_params = array();
 
-            if (is_array($value)) {
-                $flat_params = array_merge($flat_params, $this->flattenParams($value, $name));
-            }
+		foreach ($params as $name => $value) {
+
+			if ($prefix) {
+				$name = $prefix . "[".(is_int($name) ? "" : $name)."]";
+			}
+
+			if (is_array($value)) {
+				$flat_params = array_merge($flat_params, $this->flattenParams($value, $name));
+			}
 			else {
-                $flat_params[$name] = $value;
-            }
-        }
+				$flat_params[$name] = $value;
+			}
+		}
 
-        return $flat_params;
-    }
+		return $flat_params;
+	}
 
 	/**
 	 * Perform GET query
 	 * @param String $endpoint
-	 * @param Array $params
 	 * @param Array $addionnal_headers
+	 * @param array $params
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function get($endpoint, $params = array(), $addionnal_headers = array()) {
@@ -301,8 +301,8 @@ class Kiubi_API_DBO_Client {
 	/**
 	 * Perform POST query
 	 * @param String $endpoint
-	 * @param Array $params
 	 * @param Array $addionnal_headers
+	 * @param array $params
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function post($endpoint, $params = array(), $addionnal_headers = array()) {
@@ -312,8 +312,8 @@ class Kiubi_API_DBO_Client {
 	/**
 	 * Perform PUT query
 	 * @param String $endpoint
-	 * @param Array $params
 	 * @param Array $addionnal_headers
+	 * @param array $params
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function put($endpoint, $params = array(), $addionnal_headers = array()) {
@@ -323,8 +323,8 @@ class Kiubi_API_DBO_Client {
 	/**
 	 * Perform DELETE query
 	 * @param String $endpoint
-	 * @param Array $params
 	 * @param Array $addionnal_headers
+	 * @param array $params
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
 	public function delete($endpoint, $params = array(), $addionnal_headers = array()) {
@@ -378,7 +378,7 @@ class Kiubi_API_DBO_Client {
 	}
 	
 	/**
-	 * Retrive a specific page of a resultset
+	 * Retrieve a specific page of a resultset
 	 * @param Kiubi_API_DBO_Client_Response $response
 	 * @param Integer $num
 	 * @return Kiubi_API_DBO_Client_Response|false
@@ -394,7 +394,7 @@ class Kiubi_API_DBO_Client {
 	}
 
 	/**
-	 * Retrive next page of a resultset
+	 * Retrieve next page of a resultset
 	 * @param Kiubi_API_DBO_Client_Response $response
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
@@ -403,7 +403,7 @@ class Kiubi_API_DBO_Client {
 	}
 	
 	/**
-	 * Retrive previous page of a resultset
+	 * Retrieve previous page of a resultset
 	 * @param Kiubi_API_DBO_Client_Response $response
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
@@ -412,7 +412,7 @@ class Kiubi_API_DBO_Client {
 	}
 	
 	/**
-	 * Retrive first page of a resultset
+	 * Retrieve first page of a resultset
 	 * @param Kiubi_API_DBO_Client_Response $response
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
@@ -421,7 +421,7 @@ class Kiubi_API_DBO_Client {
 	}
 	
 	/**
-	 * Retrive last page of a resultset
+	 * Retrieve last page of a resultset
 	 * @param Kiubi_API_DBO_Client_Response $response
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
@@ -453,8 +453,8 @@ class Kiubi_API_DBO_Client_Response {
 	private $data = array();
 
 	/**
-	 * Kiubi_API_DBO_Client_Response
-	 * @param Array $headers
+	 * Constructor
+	 * @param array $headers
 	 * @param String $content
 	 */
 	public function __construct($headers, $content) {
@@ -494,7 +494,7 @@ class Kiubi_API_DBO_Client_Response {
 	
 	/**
 	 * Returns HTTP headers
-	 * @return Array
+	 * @return array
 	 */
 	public function getHeaders() {
 		return $this->headers;
@@ -502,7 +502,7 @@ class Kiubi_API_DBO_Client_Response {
 
 	/**
 	 * Return error if occurs
-	 * @return Array
+	 * @return array
 	 */
 	public function getError() {
 		if($this->hasFailed()) {
@@ -513,7 +513,7 @@ class Kiubi_API_DBO_Client_Response {
 	
 	/**
 	 * Return response meta data
-	 * @return Array
+	 * @return array
 	 */
 	public function getMeta() {
 		return $this->meta;
@@ -521,7 +521,7 @@ class Kiubi_API_DBO_Client_Response {
 	
 	/**
 	 * Returns response data
-	 * @return Array
+	 * @return array
 	 */
 	public function getData() {
 		return $this->data;
@@ -558,7 +558,7 @@ class Kiubi_API_DBO_File {
 	private $mime;
 
 	/**
-	 * Kiubi_API_DBO_File
+	 * Constructor
 	 * @param string $path Path of the file to send
 	 * @param string $mime Mime type of the file
 	 */
