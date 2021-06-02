@@ -341,7 +341,7 @@ class Kiubi_API_DBO_Client {
 			$response = $this->get('rate');
 			if($response instanceof Kiubi_API_DBO_Client_Response) {
 				$meta = $response->getMeta();
-				$this->rate_remaining = $meta['rate_remaining'];
+				if (isset($meta['rate_remaining'])) $this->rate_remaining = (int) $meta['rate_remaining'];
 			}
 		}
 		return $this->rate_remaining;
