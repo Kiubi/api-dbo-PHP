@@ -71,11 +71,11 @@ class Kiubi_API_DBO_Client {
 	 * Build query
 	 * @param String $method
 	 * @param String $endpoint
-	 * @param Array $addionnal_headers
 	 * @param array $params
+	 * @param array $additional_headers
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
-	public function query($method, $endpoint, $params = array(), $addionnal_headers = array()) {
+	public function query($method, $endpoint, $params = array(), $additional_headers = array()) {
 
 		if ($endpoint !== 'rate' && $this->rate_remaining == 0 && $this->autoThrottling) {
 			do {
@@ -90,7 +90,7 @@ class Kiubi_API_DBO_Client {
 		if(substr($endpoint, 0, strlen($this->api_version)+1)!=$this->api_version.'/') {
 			$endpoint = $this->api_version.'/'.$endpoint;
 		}
-		list($headers, $content) = $this->performQuery($method, $this->api_url.'/'.$endpoint, $params, $addionnal_headers);		
+		list($headers, $content) = $this->performQuery($method, $this->api_url.'/'.$endpoint, $params, $additional_headers);		
 		$ct = isset($headers['Content-Type']) ? $headers['Content-Type'] : '';
 		switch($ct) {			
 			default:
@@ -118,20 +118,20 @@ class Kiubi_API_DBO_Client {
 	 * Perform query
 	 * @param String $method
 	 * @param String $url
-	 * @param Array $addionnal_headers
 	 * @param array $params
+	 * @param array $additional_headers
 	 * @return array[array, String] Table of headers and content as string
 	 */
-	protected function performQuery($method, $url, $params = array(), $addionnal_headers = array()) {
-		
+	protected function performQuery($method, $url, $params = array(), $additional_headers = array()) {
+
 		$curl = curl_init($url);
 		
 		curl_setopt($curl, CURLOPT_TIMEOUT, $this->timeout);
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
 		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
-		
-		$headers = (array) $addionnal_headers;
+
+		$headers = (array) $additional_headers;
 		$headers['X-API'] = 'Kiubi API PHP Client v'.$this->version;
 		if($this->access_token) {
 			$headers['Authorization'] = 'token '.$this->access_token;
@@ -290,45 +290,45 @@ class Kiubi_API_DBO_Client {
 	/**
 	 * Perform GET query
 	 * @param String $endpoint
-	 * @param Array $addionnal_headers
 	 * @param array $params
+	 * @param array $additional_headers
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
-	public function get($endpoint, $params = array(), $addionnal_headers = array()) {
-		return $this->query('GET', $endpoint, $params, $addionnal_headers);
+	public function get($endpoint, $params = array(), $additional_headers = array()) {
+		return $this->query('GET', $endpoint, $params, $additional_headers);
 	}
 	
 	/**
 	 * Perform POST query
 	 * @param String $endpoint
-	 * @param Array $addionnal_headers
 	 * @param array $params
+	 * @param array $additional_headers
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
-	public function post($endpoint, $params = array(), $addionnal_headers = array()) {
-		return $this->query('POST', $endpoint, $params, $addionnal_headers);
+	public function post($endpoint, $params = array(), $additional_headers = array()) {
+		return $this->query('POST', $endpoint, $params, $additional_headers);
 	}
 	
 	/**
 	 * Perform PUT query
 	 * @param String $endpoint
-	 * @param Array $addionnal_headers
 	 * @param array $params
+	 * @param array $additional_headers
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
-	public function put($endpoint, $params = array(), $addionnal_headers = array()) {
-		return $this->query('PUT', $endpoint, $params, $addionnal_headers);
+	public function put($endpoint, $params = array(), $additional_headers = array()) {
+		return $this->query('PUT', $endpoint, $params, $additional_headers);
 	}
 	
 	/**
 	 * Perform DELETE query
 	 * @param String $endpoint
-	 * @param Array $addionnal_headers
 	 * @param array $params
+	 * @param array $additional_headers
 	 * @return Kiubi_API_DBO_Client_Response
 	 */
-	public function delete($endpoint, $params = array(), $addionnal_headers = array()) {
-		return $this->query('DELETE', $endpoint, $params, $addionnal_headers);
+	public function delete($endpoint, $params = array(), $additional_headers = array()) {
+		return $this->query('DELETE', $endpoint, $params, $additional_headers);
 	}
 	
 	/**
