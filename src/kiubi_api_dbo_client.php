@@ -3,18 +3,20 @@
  * Kiubi Client API Developers
  * @category Kiubi
  * @package  API_DBO
- * @copyright Copyright (c) Kiubi 2019
+ * @copyright Copyright (c) Kiubi 2021
  */
 
 class Kiubi_API_DBO_Client {
 	
 	protected $api_url			= 'https://api.kiubi.com';
-	protected $version			= '1.6';
+	protected $version			= '1.7';
 	protected $api_version		= 'v1';
 	protected $access_token		= '';
 	protected $rate_remaining	= 0;
 	protected $timeout			= 3;
 	protected $autoThrottling	= false;
+	protected $maxRetry			= 0; // Disabled by default
+	protected $currentRetry		= 0;
 
 	/**
 	 * Constructor
@@ -25,7 +27,15 @@ class Kiubi_API_DBO_Client {
 	}
 
 	/**
-	 * Active ou désactive la gestion automatique des quotas
+	 * Max retries on connection errors
+	 * @param int $retry
+	 */
+	public function setAutoRetry($retry) {
+		$this->maxRetry = $retry;
+	}
+
+	/**
+	 * Enable or disable auto throttling
 	 *
 	 * @param boolean $enabled
 	 */
@@ -155,6 +165,10 @@ class Kiubi_API_DBO_Client {
 		$response = curl_exec($curl);
 
 		if ($response===false) {
+			if ($this->currentRetry < $this->maxRetry) {
+				$this->currentRetry++;
+				return $this->performQuery($method, $url, $params, $additional_headers);
+			}
 			$header = 'Content-Type: application/json';
 			$content = json_encode(array(
 				'meta'=>array('success'=>false,'status_code'=>500),
@@ -165,6 +179,7 @@ class Kiubi_API_DBO_Client {
 			$header = substr($response, 0, $header_size);
 			$content = substr($response, $header_size);
 		}
+		$this->currentRetry = 0;
 		curl_close($curl);
 
 		$headers = array();
