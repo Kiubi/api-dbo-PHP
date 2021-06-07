@@ -149,7 +149,7 @@ class Kiubi_API_DBO_Client {
 		
 		if(count($params)) {		
 			// Allow datas on HTTP PUT/DELETE methods
-			$params['method'] = $method;
+			if (!isset($params['method'])) $params['method'] = $method;
 			$method = "POST";
 			
 			$payload = $this->preparePayload($params);
