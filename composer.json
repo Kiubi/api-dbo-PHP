@@ -1,0 +1,19 @@
+{
+    "name": "kiubi/php-sdk",
+    "description": "PHP SDK for Kiubi API",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sébastien Braun",
+            "email": "sebastien.braun@kiubi.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Kiubi\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=5.4.0"
+	}
+}

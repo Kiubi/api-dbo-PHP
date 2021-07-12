@@ -1,5 +1,6 @@
 # Kiubi API Developers Back-office Client PHP
 
+
 ## Description
 
 La plateforme [Kiubi](http://www.kiubi.com) fournit l'[API DBO](https://api.kiubi.com/console) aux développeurs afin d'interconnecter la plateforme avec leurs applications. Cette API leur fournis un accès direct et sécurisé aux données de tous leurs sites.
@@ -15,6 +16,7 @@ Kiubi possède un environnement de bac à sable pour tester et débugger les app
 
 L'accès à la console est public mais l'exécution de requêtes nécessite un compte l'ouverture d'un compte sur la Plateforme. 
 
+
 ## Pré-requis
 
 - Un environnement pouvant exécuter du code PHP
@@ -23,11 +25,12 @@ L'accès à la console est public mais l'exécution de requêtes nécessite un c
 
 Chaque utilisateur ayant un compte Back-office a la possibilité de créer et gérer ses clés API dans son profil utilisateur afin d'utiliser l'API DBO.
 
+
 ## Déploiement
 
-La librairie doit être inclue dans votre code PHP avant tout appel aux classes et méthodes du client
+La librairie peut être simple déployée avec composer : 
 
-	include_once 'kiubi_api_dbo_client.php';
+	composer require kiubi/php-sdk
 	
 	
 ## Utilisation
@@ -36,19 +39,19 @@ Le client PHP est composé de plusieurs classes permettant de requêter l'API DB
 
 - Le client :
     	
-    	class Kiubi_API_DBO_Client {
+    	class Api {
     	
     	}
 
 - La réponse :
     
-    	class Kiubi_API_DBO_Client_Response {
+    	class Response {
     	
    		}
 
 - La gestion de l'upload de fichiers :
     
-    	class Kiubi_API_DBO_File {
+    	class File {
     	
    		}
 
@@ -64,7 +67,7 @@ Voici la liste des méthodes disponibles dans le client PHP :
     - delete() : Permet de lancer une requête vers l'API en méthode http DELETE
     - query() : Structure une requête et lance son exécution
     - *performQuery()* : Exécute une requête vers l'API en utilisant cURL (méthode protégée)
-    - *getJsonResponse()* : Retourne un object `Kiubi_API_DBO_Client_Response` permettant de traiter la réponse à une requête (méthode protégée)
+    - *getJsonResponse()* : Retourne un object `Response` permettant de traiter la réponse à une requête (méthode protégée)
     - *prepareHeaders()* : Prépare les entêtes pour une requête multipart (méthode protégée)
     - *preparePayload()* : Prépare le contenu pour une requête multipart (méthode protégée)
     - *flattenParams()* : Transforme les paramètres multidimentionnels en paramètre simple pour une requête multipart (méthode protégée)
@@ -97,69 +100,73 @@ Voici la liste des méthodes disponibles dans le client PHP :
 
     
 ## Exemples
-    
+
+	
 ### Récupération de la liste de ses sites
     
 	$token = '---TOKEN---';   // Votre clé API
 
-    $api = new Kiubi_API_DBO_Client($token);
+    $api = new Kiubi\Api($token);
     $query = $api->get('sites');
-    if($query->hasFailed()) {
+    if ($query->hasFailed()) {
         $err = $query->getError();
         echo $err['message']."<br/>\n";
     }
-    if($query->hasSucceed()) {
+    if ($query->hasSucceed()) {
         foreach($query->getData() as $menu) {
             echo $menu['name']."<br/>\n";
         }
     }
+
 
 ### Récupération des menus du Site web
     
 	$token = '---TOKEN---';   // Votre clé API
 	$site  = 'mon-code-site'; // Le code site
 
-    $api = new Kiubi_API_DBO_Client($token);
+    $api = new Kiubi\Api($token);
     $query = $api->get('sites/'.$site.'/cms/menus');
-    if($query->hasFailed()) {
+    if ($query->hasFailed()) {
         $err = $query->getError();
         echo $err['message']."<br/>\n";
     }
-    if($query->hasSucceed()) {
+    if ($query->hasSucceed()) {
         foreach($query->getData() as $menu) {
             echo $menu['name']."<br/>\n";
         }
     }
+
 
 ### Récupération des commandes d'un site
 
 	$token = '---TOKEN---';   // Votre clé API
 	$site  = 'mon-code-site'; // Le code site
 
-    $api = new Kiubi_API_DBO_Client($token);
+    $api = new Kiubi\Api($token);
     $response = $api->get('sites/'.$site.'/checkout/orders');
-    if($response->hasSucceed()) {
+    if ($response->hasSucceed()) {
         do {
             $next = false;
             $data = $response->getData();
             foreach($data as $cmd) {
                 echo $cmd['creation_date'].' - '.$cmd['reference'])."<br/>\n";
             }
-            if($api->hasNextPage($response) && $api->getRateRemaining()>0) {
+            if ($api->hasNextPage($response) && $api->getRateRemaining()>0) {
                 $next = true;
                 $response = $api->getNextPage($response);
             }   
-        }while($next && $response->hasSucceed());
+        } while($next && $response->hasSucceed());
     }
+
 
 ### Envoi d'un fichier dans la médiathèque d'un site
 
 	$token = '---TOKEN---';   // Votre clé API
 	$site  = 'mon-code-site'; // Le code site
 
-    $api = new Kiubi_API_DBO_Client($token);
-    $response = $api->post('sites/'.$site.'/media/files', array('name'=>'fichier', 'folder_id'=>2, 'file'=>new Kiubi_API_DBO_File('/path/to/file.txt'));
-	if($response->hasSucceed()) {
+    $api = new Kiubi\Api($token);
+    $response = $api->post('sites/'.$site.'/media/files', array('name'=>'fichier', 'folder_id'=>2, 'file'=>new File('/path/to/file.txt'));
+	if ($response->hasSucceed()) {
         $media_id = $response->getData();
     }
 	
