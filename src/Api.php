@@ -8,7 +8,7 @@
 namespace Kiubi;
 
 
-class API {
+class Api {
 	
 	protected $api_url			= 'https://api.kiubi.com';
 	protected $version			= '2.0';
