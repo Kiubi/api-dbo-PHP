@@ -22,15 +22,13 @@ class Response {
 		
 		$this->headers = $headers;
 		reset($headers);
-		$http_code = key($headers);
-		if (preg_match("=^HTTP/[\d].[\d] ([\d]+) =", $http_code, $regs)) {
-			if ($regs[1] == '500') {
-				$this->meta = array(
-					'success' => false,
-					'status_code'=>500
-				);
-				return;
-			}
+		$http_code = current($headers);
+		if ($http_code == 500 || $http_code == 413) { // payload are probably not well formed
+			$this->meta = array(
+				'success' => false,
+				'status_code' => $http_code
+			);
+			return;
 		}
 	
 		$content = json_decode($content, true);

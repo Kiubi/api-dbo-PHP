@@ -186,16 +186,22 @@ class Api {
 
 		$headers = array();
 		foreach(explode("\r\n", $header) as $h) {
-			if (strlen($h)) {
-				if (strlen($h) == 0) {
+			if (strlen($h) == 0) {
+				continue;
+			}
+			if (strpos($h, 'HTTP/') === 0) {
+				$h = explode(' ', $h, 3);
+				if (count($h) < 2) {
 					continue;
 				}
+				$h[1] = (int) $h[1];
+			} else {
 				$h = explode(':', $h, 2);
 				if (count($h) != 2) {
 					continue;
-				}
-				$headers[trim($h[0])] = trim($h[1]);
+				}	
 			}
+			$headers[trim($h[0])] = trim($h[1]);
 		}
 		return array($headers, $content);
 	}
