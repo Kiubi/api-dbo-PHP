@@ -139,6 +139,8 @@ class Api {
 		$curl = curl_init($url);
 		
 		curl_setopt($curl, CURLOPT_TIMEOUT, $this->timeout);
+		curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, $this->timeout);
+		curl_setopt($curl, CURLOPT_NOSIGNAL, 1);
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
 		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
