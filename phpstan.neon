@@ -3,4 +3,5 @@ parameters:
     phpVersion: 70333
     paths:
         - src
+        - tests
         
