@@ -139,7 +139,7 @@ class Api {
 	 * @param string $content
 	 * @return Response
 	 */
-	protected function getJsonResponse($headers, $content) {
+	protected function getJsonResponse(array $headers, string $content) {
 		return new Response($headers, $content);
 	}
 
@@ -162,10 +162,6 @@ class Api {
 		}
 
 		if (count($params)) {
-			// Allow datas on HTTP PUT/DELETE methods
-			if (!isset($params['method'])) $params['method'] = $method;
-			$method = "POST";
-
 			$payload = $this->preparePayload($params);
 			$headers = array_merge($headers, $payload['headers']);
 		}
@@ -178,7 +174,7 @@ class Api {
 				return $this->performQuery($method, $url, $params, $additional_headers);
 			}
 			$rawHeaders = 'Content-Type: application/json';
-			$rawContent = json_encode(array(
+			$rawContent = (string) json_encode(array(
 				'meta'=>array('success'=>false,'status_code'=>500),
 				'error'=>array('code'=>5007,'message'=>$result['error']) // 5007 == UNEXPECTED ERROR
 			)); // Mimic API Error
@@ -224,7 +220,12 @@ class Api {
 	 * @param string $body
 	 * @return array{success: true, headers: string, content: string}|array{success: false, error: string}
 	 */
-	protected function curlQuery($url, $method, $headers, $body) {
+	protected function curlQuery(string $url, string $method, array $headers, string $body) {
+	
+		if ($method === 'GET' && strlen($body) > 0) {
+			$url .= '?'.$body;
+		}
+		
 		$curl = curl_init($url);
 
 		curl_setopt($curl, CURLOPT_TIMEOUT, $this->timeout);
@@ -234,7 +235,7 @@ class Api {
 		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
 		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
 
-		if (strlen($body) > 0) {
+		if ($method !== 'GET' && strlen($body) > 0) {
 			curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
 		}
 
@@ -270,7 +271,7 @@ class Api {
 	 * @param array<string, mixed> $headers
 	 * @return string[]
 	 */
-	protected function prepareHeaders($headers){
+	protected function prepareHeaders(array $headers){
 		
 		$http_headers = array();
 		
@@ -291,7 +292,7 @@ class Api {
 	 *   "headers" array List of headers to add to the request
 	 *   "body"   string Body of the request
 	 */
-	protected function preparePayload($params){
+	protected function preparePayload(array $params){
 		
 		$flat_params = $this->flattenParams($params);
 		$contains_file = false;
@@ -330,7 +331,7 @@ class Api {
 		}
 		else {
 			$headers = array("Content-Type" => "application/x-www-form-urlencoded");
-			$body = http_build_query($params);
+			$body = http_build_query($params); // http_build_query($params, '', '&', PHP_QUERY_RFC3986);
 		}
 		
 		return array(
