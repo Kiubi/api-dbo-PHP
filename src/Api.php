@@ -2,7 +2,7 @@
 
 /**
  * Kiubi Client API Developers
- * @copyright Copyright (c) Kiubi 2021
+ * @copyright Copyright (c) Kiubi 2026
  */
 
 namespace Kiubi;
@@ -14,7 +14,7 @@ class Api {
 	protected $api_url			= 'https://api.kiubi.com';
 	
 	/** @var string */
-	protected $version			= '2.0';
+	protected $version			= '3.0';
 	
 	/** @var string  */
 	protected $api_version		= 'v1';
@@ -125,16 +125,12 @@ class Api {
 		if (substr($endpoint, 0, strlen($this->api_version)+1)!=$this->api_version.'/') {
 			$endpoint = $this->api_version.'/'.$endpoint;
 		}
-		list($headers, $content) = $this->performQuery($method, $this->api_url.'/'.$endpoint, $params, $additional_headers);		
-		$ct = $headers['Content-Type'] ?? '';
-		switch($ct) {			
-			default:
-			case 'application/json':
-				$response = $this->getJsonResponse($headers, $content);
-				$meta = $response->getMeta();
-				if (isset($meta['rate_remaining'])) $this->rate_remaining = (int) $meta['rate_remaining'];
-				return $response;
-		}
+		$response = $this->performQuery($method, $this->api_url.'/'.$endpoint, $params, $additional_headers);
+		
+		$meta = $response->getMeta();
+		if (isset($meta['rate_remaining'])) $this->rate_remaining = (int) $meta['rate_remaining'];
+		
+		return $response;
 	}
 	
 	/**
@@ -153,18 +149,11 @@ class Api {
 	 * @param string $url
 	 * @param array<string, mixed> $params
 	 * @param array<string, mixed> $additional_headers
-	 * @return array{0: array<string, mixed>, 1: string} Table of headers and content as string
+	 * @return Response
 	 */
 	protected function performQuery(string $method, string $url, $params = array(), $additional_headers = array()) {
 
-		$curl = curl_init($url);
-		
-		curl_setopt($curl, CURLOPT_TIMEOUT, $this->timeout);
-		curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, $this->timeout);
-		curl_setopt($curl, CURLOPT_NOSIGNAL, true);
-		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
-		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
+		if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'])) $method = 'GET';
 
 		$headers = (array) $additional_headers;
 		$headers['X-API'] = 'Kiubi API PHP Client v'.$this->version;
@@ -172,46 +161,35 @@ class Api {
 			$headers['Authorization'] = 'token '.$this->access_token;
 		}
 
-		if (!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'])) $method = 'GET';
-
-		if (count($params)) {		
+		if (count($params)) {
 			// Allow datas on HTTP PUT/DELETE methods
 			if (!isset($params['method'])) $params['method'] = $method;
 			$method = "POST";
-			
+
 			$payload = $this->preparePayload($params);
 			$headers = array_merge($headers, $payload['headers']);
-			
-			curl_setopt($curl, CURLOPT_POSTFIELDS, $payload['body']);
 		}
 		
-		curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
-		curl_setopt($curl, CURLOPT_HEADER, true);
-		curl_setopt($curl, CURLOPT_HTTPHEADER, $this->prepareHeaders($headers));
-
-		$response = curl_exec($curl);
-
-		if ($response===false) {
+		$result = $this->curlQuery($url, $method, $this->prepareHeaders($headers), $payload['body'] ?? '');
+		
+		if ($result['success'] === false) {
 			if ($this->currentRetry < $this->maxRetry) {
 				$this->currentRetry++;
 				return $this->performQuery($method, $url, $params, $additional_headers);
 			}
-			$header = 'Content-Type: application/json';
-			$content = json_encode(array(
+			$rawHeaders = 'Content-Type: application/json';
+			$rawContent = json_encode(array(
 				'meta'=>array('success'=>false,'status_code'=>500),
-				'error'=>array('code'=>5007,'message'=>curl_error($curl)), // 5007 == UNEXPECTED ERROR
+				'error'=>array('code'=>5007,'message'=>$result['error']) // 5007 == UNEXPECTED ERROR
 			)); // Mimic API Error
 		} else {
-			$response = (string) $response;
-			$header_size = curl_getinfo($curl,CURLINFO_HEADER_SIZE);
-			$header = substr($response, 0, $header_size);
-			$content = substr($response, $header_size);
+			$rawHeaders = $result['headers'];
+			$rawContent = $result['content'];
 		}
 		$this->currentRetry = 0;
-		curl_close($curl);
 
 		$headers = array();
-		foreach(explode("\r\n", $header) as $h) {
+		foreach(explode("\r\n", $rawHeaders) as $h) {
 			if (strlen($h) == 0) {
 				continue;
 			}
@@ -229,7 +207,62 @@ class Api {
 			}
 			$headers[trim((string) $h[0])] = trim((string) $h[1]);
 		}
-		return array($headers, $content);
+		
+		switch($headers['Content-Type'] ?? '') {
+			default:
+			case 'application/json':
+				$response = $this->getJsonResponse($headers, $rawContent);
+				return $response;
+		}
+		
+	}
+
+	/**
+	 * @param string $url
+	 * @param 'GET'|'POST'|'PUT'|'DELETE' $method
+	 * @param string[] $headers
+	 * @param string $body
+	 * @return array{success: true, headers: string, content: string}|array{success: false, error: string}
+	 */
+	protected function curlQuery($url, $method, $headers, $body) {
+		$curl = curl_init($url);
+
+		curl_setopt($curl, CURLOPT_TIMEOUT, $this->timeout);
+		curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, $this->timeout);
+		curl_setopt($curl, CURLOPT_NOSIGNAL, true);
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
+		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
+
+		if (strlen($body) > 0) {
+			curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
+		}
+
+		curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
+		curl_setopt($curl, CURLOPT_HEADER, true);
+		curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+
+		$response = curl_exec($curl);
+
+		if ($response === false) {
+			return [
+				'success' => false,
+				'error' => curl_error($curl)
+			];
+		}
+		
+		$response = (string) $response;
+		$header_size = curl_getinfo($curl,CURLINFO_HEADER_SIZE);
+		$headers = substr($response, 0, $header_size);
+		$body = substr($response, $header_size);
+	
+		curl_close($curl);
+		
+		return [
+			'success' => true,
+			'headers' => $headers,
+			'content' => $body
+		];
 	}
 	
 	/**
