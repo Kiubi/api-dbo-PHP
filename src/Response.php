@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 /**
- * @copyright Copyright (c) Kiubi 2021
+ * @copyright Copyright (c) Kiubi 2026
  */
  
 namespace Kiubi;
@@ -43,6 +43,11 @@ class Response {
 				'success' => false,
 				'status_code' => $http_code
 			);
+			$this->error = array(
+				'code' => 5007, // 5007 == UNEXPECTED ERROR
+				'message' => 'Server error'
+			);
+			$this->data = null;
 			return;
 		}
 	
@@ -51,7 +56,7 @@ class Response {
 		if (!is_array($content)) {
 			$this->meta = array(
 				'success' => false,
-				'status_code'=>500
+				'status_code' => 500
 			);
 			$this->error = array(
 				'code' => 5007, // 5007 == UNEXPECTED ERROR
