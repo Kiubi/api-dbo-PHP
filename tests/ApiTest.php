@@ -92,6 +92,7 @@ class ApiTest extends TestCase {
 		$this->assertTrue($result->hasSucceed());
 		$this->assertEquals(200, $result->getHttpCode());
 		$this->assertEquals([], $result->getData());
+		$this->assertNull($result->getError());
 		
 	}
 
@@ -293,6 +294,365 @@ class ApiTest extends TestCase {
 		$this->assertTrue($result->hasSucceed());
 		$this->assertEquals(200, $result->getHttpCode());
 		$this->assertEquals([], $result->getData());
+
+	}
+
+	public function test_set_url(): void {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.exemple.org/api/v1/path'),
+				$this->equalTo('GET'),
+				$this->equalTo([
+					'X-API: Kiubi API PHP Client v3.0',
+					'Authorization: token TESTTOKEN'
+				]),
+				$this->equalTo(''),
+			)
+			->willReturn($this->mockSuccess());
+
+		$api->setUrl('https://api.exemple.org/api');
+		
+		$result = $api->query('GET', '/path');
+
+		$this->assertTrue($result->hasSucceed());
+
+	}
+	
+	
+	public function test_request_rate_remaining() {
+
+		$api = $this->mockApi();
+		$api->expects($this->once()) // only one req
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/rate'),
+				$this->equalTo('GET')
+			)
+			->willReturn([
+				'success' => true,
+				'headers' => 'HTTP/1.1 200 OK'."\r\n".'Content-Type: application/json',
+				'content' => '{"meta":{"success":true,"status_code":200,"rate_remaining":123},"data":{}}'
+			]);
+
+		$this->assertEquals(123, $api->getRateRemaining()); // expect run GET /rate
+
+		$this->assertEquals(123, $api->getRateRemaining()); // expect value from cache
+	}
+
+	public function test_rate_remaining_persistence() {
+
+		$api = $this->mockApi();
+		$api->expects($this->once()) // only one req
+		->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/test'),
+				$this->equalTo('GET')
+			)
+			->willReturn([
+				'success' => true,
+				'headers' => 'HTTP/1.1 200 OK'."\r\n".'Content-Type: application/json',
+				'content' => '{"meta":{"success":true,"status_code":200,"rate_remaining":123},"data":{}}'
+			]);
+
+		$result = $api->get('/test');
+		$this->assertTrue($result->hasSucceed());
+		
+		$this->assertEquals(123, $api->getRateRemaining()); // expect value from previous request
+	}
+	
+	public function test_access_token() {
+		
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/test'),
+				$this->equalTo('GET'),
+				$this->equalTo([
+					'X-API: Kiubi API PHP Client v3.0',
+					'Authorization: token NEWTOKEN'
+				]),
+				$this->equalTo(''),
+			)
+			->willReturn($this->mockSuccess());
+		
+		$api->setAccessToken('NEWTOKEN');
+		
+		$this->assertEquals('NEWTOKEN', $api->getAccessToken());
+		
+		$result = $api->get('/test');
+		
+		$this->assertTrue($result->hasSucceed());
+		
+	}
+	
+	public function test_navigation() {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+		->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/test'),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->equalTo('limit=10&page=2')
+			)
+			->willReturn([
+				'success' => true,
+				'headers' => 'HTTP/1.1 200 OK'."\r\n".'Content-Type: application/json',
+				'content' => '{"meta":{"success":true,"status_code":200,"rate_remaining":123,"link":{"next_page":"/test?limit=10&page=3","previous_page":"/test?limit=10&page=1","first_page":"/test?limit=10","last_page":"/test?limit=10&page=4"}},"data":{}}'
+			]);
+
+		$response = $api->get('/test', ['limit' => 10, 'page' => 2]);
+		$this->assertTrue($response->hasSucceed());
+		
+		$this->assertTrue($api->hasNextPage($response));
+		$this->assertTrue($api->hasPreviousPage($response));
+		
+	}
+	
+	
+	function providerNavigation() {
+		return [
+			['{"meta":{"success":true,"status_code":200,"rate_remaining":123,"link":{"next_page":"/test?limit=10&page=3","previous_page":"/test?limit=10&page=1","first_page":"/test?limit=10","last_page":"/test?limit=10&page=4"}},"data":{}}']
+		];
+	}
+
+	/**
+	 * @param $content
+	 * @return void
+	 * @dataProvider providerNavigation
+	 */
+	public function test_navigation_next($content) {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/test?limit=10&page=3'),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->equalTo('')
+			)
+			->willReturn([
+				'success' => true,
+				'headers' => 'HTTP/1.1 200 OK'."\r\n".'Content-Type: application/json',
+				'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
+			]);
+
+		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], $content);
+		
+		$responseNav = $api->getNextPage($response);
+		$this->assertTrue($responseNav->hasSucceed());
+
+	}
+
+	/**
+	 * @param $content
+	 * @return void
+	 * @dataProvider providerNavigation
+	 */
+	public function test_navigation_previous($content) {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/test?limit=10&page=1'),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->equalTo('')
+			)
+			->willReturn([
+				'success' => true,
+				'headers' => 'HTTP/1.1 200 OK'."\r\n".'Content-Type: application/json',
+				'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
+			]);
+
+		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], $content);
+
+		$responsePrev = $api->getPreviousPage($response);
+		$this->assertTrue($responsePrev->hasSucceed());
+
+	}
+
+	/**
+	 * @param $content
+	 * @return void
+	 * @dataProvider providerNavigation
+	 */
+	public function test_navigation_first($content) {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/test?limit=10'),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->equalTo('')
+			)
+			->willReturn([
+				'success' => true,
+				'headers' => 'HTTP/1.1 200 OK'."\r\n".'Content-Type: application/json',
+				'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
+			]);
+
+		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], $content);
+
+		$responseFirst = $api->getFirstPage($response);
+		$this->assertTrue($responseFirst->hasSucceed());
+
+	}
+
+	/**
+	 * @param $content
+	 * @return void
+	 * @dataProvider providerNavigation
+	 */
+	public function test_navigation_last($content) {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/test?limit=10&page=4'),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->equalTo('')
+			)
+			->willReturn([
+				'success' => true,
+				'headers' => 'HTTP/1.1 200 OK'."\r\n".'Content-Type: application/json',
+				'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
+			]);
+
+		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], $content);
+
+		$responseLast = $api->getLastPage($response);
+		$this->assertTrue($responseLast->hasSucceed());
+
+	}
+
+	/**
+	 * @param $content
+	 * @return void
+	 * @dataProvider providerNavigation
+	 */
+	public function test_navigation_page($content) {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/test?limit=10&page=123'),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->equalTo('')
+			)
+			->willReturn([
+				'success' => true,
+				'headers' => 'HTTP/1.1 200 OK'."\r\n".'Content-Type: application/json',
+				'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
+			]);
+
+		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], $content);
+
+		$responseLast = $api->getPage($response, 123);
+		$this->assertTrue($responseLast->hasSucceed());
+
+	}
+	
+	public function test_no_navigation() {
+
+		$api = $this->mockApi();
+		$api->expects($this->never())
+			->method('curlQuery');
+
+		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], '{"meta":{"success":true,"status_code":200,"rate_remaining":123,"link":{}},"data":{}}');
+
+		$this->assertFalse($api->hasPreviousPage($response));
+		$this->assertFalse($api->hasNextPage($response));
+		
+		$this->assertFalse($api->getFirstPage($response));
+		$this->assertFalse($api->getLastPage($response));
+		$this->assertFalse($api->getNextPage($response));
+		$this->assertFalse($api->getPreviousPage($response));
+		$this->assertFalse($api->getPage($response, 1));
+
+	}
+	
+	public function test_auto_retry_ok() {
+		
+		$api = $this->mockApi();
+
+		$api->expects($this->exactly(2))
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/test'),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->anything(),
+			)
+			->willReturnOnConsecutiveCalls(
+				[
+					'success' => false,
+					'error' => 'NETWORK ERROR',
+				],
+				[
+					'success' => true,
+					'headers' => 'HTTP/1.1 200 OK'."\r\n".'Content-Type: application/json',
+					'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
+				]
+			);
+		
+		$api->setAutoRetry(1);
+		
+		$response = $api->get('/test');
+		
+		$this->assertTrue($response->hasSucceed());
+		
+	}
+
+	public function test_auto_retry_fail() {
+
+		$api = $this->mockApi();
+
+		$api->expects($this->exactly(3))
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/test'),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->anything(),
+			)
+			->willReturnOnConsecutiveCalls(
+				[
+					'success' => false,
+					'error' => 'NETWORK ERROR',
+				],
+				[
+					'success' => false,
+					'error' => 'NETWORK ERROR',
+				],
+				[
+					'success' => false,
+					'error' => 'NETWORK ERROR',
+				],
+			);
+
+		$api->setAutoRetry(2);
+
+		$response = $api->get('/test');
+
+		$this->assertTrue($response->hasFailed());
+		$this->assertEquals([
+			'code' => 5007,
+    		'message' => 'NETWORK ERROR'
+		], $response->getError());
 
 	}
 	

@@ -219,6 +219,7 @@ class Api {
 	 * @param string[] $headers
 	 * @param string $body
 	 * @return array{success: true, headers: string, content: string}|array{success: false, error: string}
+	 * @codeCoverageIgnore 
 	 */
 	protected function curlQuery(string $url, string $method, array $headers, string $body) {
 	
@@ -420,10 +421,8 @@ class Api {
 	 * @return int
 	 */
 	public function getRateRemaining(bool $remote_check = false) {
-		if ($remote_check || !$this->rate_remaining) {			
-			$response = $this->get('rate');
-			$meta = $response->getMeta();
-			if (isset($meta['rate_remaining'])) $this->rate_remaining = (int) $meta['rate_remaining'];
+		if ($remote_check || $this->rate_remaining === 0) {			
+			$this->get('rate');
 		}
 		return $this->rate_remaining;
 	}
@@ -465,7 +464,7 @@ class Api {
 	public function getPage(Response $response, int $num) {
 		$meta = $response->getMeta();
 		if (isset($meta['link']['first_page']) && $meta['link']['first_page'] != false) {
-			return $this->get($meta['link']['first_page'].'&page='.(int)$num);
+			return $this->get($meta['link']['first_page'].'&page=' . $num);
 		}
 		
 		return false;

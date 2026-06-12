@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 /**
- * @copyright Copyright (c) Kiubi 2021
+ * @copyright Copyright (c) Kiubi 2026
  */
 
 namespace Kiubi;
