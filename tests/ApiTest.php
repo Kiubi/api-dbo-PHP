@@ -42,7 +42,7 @@ class ApiTest extends TestCase {
 		$mock = $this
 			->getMockBuilder(\Kiubi\Api::class)
 			->setConstructorArgs(['TESTTOKEN'])
-			->onlyMethods(['curlQuery'])
+			->onlyMethods(['curlQuery', 'wait'])
 			->getMock();
 		
 		return $mock;
@@ -51,11 +51,11 @@ class ApiTest extends TestCase {
 	/**
 	 * @return array<string, mixed>
 	 */
-	protected function mockSuccess() : array {
+	protected function mockSuccess(int $rate_remaining = 123) : array {
 		return [
 			'success' => true,
 			'headers' => 'HTTP/1.1 200 OK'."\r\n".'Content-Type: application/json',
-			'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
+			'content' => '{"meta":{"success":true,"status_code":200,"rate_remaining":'.$rate_remaining.'},"data":{}}'
 		];
 	}
 
@@ -68,6 +68,17 @@ class ApiTest extends TestCase {
 			'success' => true,
 			'headers' => 'HTTP/1.1 400 OK'."\r\n".'Content-Type: application/json',
 			'content' => '{"meta":{"success":false,"status_code":400},"error":{"code":123,"message":"'.$error.'"}}'
+		];
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	protected function mockQuotaFailure() : array {
+		return [
+			'success' => true,
+			'headers' => 'HTTP/1.1 403 OK'."\r\n".'Content-Type: application/json',
+			'content' => '{"meta":{"success":false,"status_code":403,"rate_remaining":0},"error":{"code":4300,"message":"Quota squandered"}}'
 		];
 	}
 
@@ -331,11 +342,7 @@ class ApiTest extends TestCase {
 				$this->equalTo('https://api.kiubi.com/v1/rate'),
 				$this->equalTo('GET')
 			)
-			->willReturn([
-				'success' => true,
-				'headers' => 'HTTP/1.1 200 OK'."\r\n".'Content-Type: application/json',
-				'content' => '{"meta":{"success":true,"status_code":200,"rate_remaining":123},"data":{}}'
-			]);
+			->willReturn($this->mockSuccess()); // 123 as remaining
 
 		$this->assertEquals(123, $api->getRateRemaining()); // expect run GET /rate
 
@@ -653,6 +660,116 @@ class ApiTest extends TestCase {
 			'code' => 5007,
     		'message' => 'NETWORK ERROR'
 		], $response->getError());
+
+	}
+
+	function test_fail_on_quota() {
+		
+		$api = $this->mockApi();
+		$api->setAutoThrottling(false); // no throttle
+
+		$api->expects($this->exactly(1))
+			->method('curlQuery')
+			->with(
+				$this->anything(),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->anything(),
+			)
+			->willReturn($this->mockQuotaFailure());
+		
+		$response = $api->get('/test');
+
+		$this->assertFalse($response->hasSucceed());
+		$this->assertEquals(4300, $response->getError()['code']);
+		
+	}
+	
+	function test_manual_throttling() {
+		$this->assertTrue(true);
+
+		$api = $this->mockApi();
+		$api->setAutoThrottling(false);
+
+		$api->expects($this->exactly(3))
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/rate'),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->anything(),
+			)
+			->willReturnOnConsecutiveCalls(
+				$this->mockSuccess(0), // attentempt #1 fail no quota
+				$this->mockSuccess(0), // attentempt #2 fail no quota
+				$this->mockSuccess(123),	   // attentempt #3 success, response has rate_remaining of 123
+			);
+		
+		$watchDog = 0;
+		while($api->getRateRemaining(true) === 0) {
+			$watchDog++;
+			$this->assertLessThanOrEqual(2, $watchDog);
+		}
+		
+		$this->assertEquals(123, $api->getRateRemaining());
+		
+	}
+	
+	function test_auto_throttling() {
+		
+		$api = $this->mockApi();
+
+		$api->expects($this->exactly(3))
+			->method('curlQuery')
+			->with(
+				$this->anything(),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->anything(),
+			)
+			->willReturnOnConsecutiveCalls(
+				$this->mockQuotaFailure(), // attentempt #1 fail no quota
+				$this->mockQuotaFailure(), // attentempt #2 fail no quota
+				$this->mockSuccess(),	   // attentempt #3 success, response has rate_remaining of 123
+			);
+
+		$api->expects($this->exactly(2))->method('wait');
+
+		$api->setAutoRetry(false);
+		$api->setAutoThrottling(true);
+		
+		$response = $api->get('/test');
+
+		$this->assertTrue($response->hasSucceed());
+		$this->assertEquals(123, $api->getRateRemaining()); // from $this->mockSuccess()
+		
+	}
+
+	function test_auto_throttling_exhaustion() {
+		
+		$api = $this->mockApi();
+		$api->setAutoThrottling(true);
+		$api->expects($this->exactly(4))
+			->method('curlQuery')
+			->with(
+				$this->anything(),
+				$this->equalTo('GET'),
+				$this->anything(),
+				$this->anything(),
+			)
+			->willReturnOnConsecutiveCalls(
+				$this->mockSuccess(0), // query #1 ok but no more remaining query
+				$this->mockQuotaFailure(), // query #2 attentempt #1 fail no quota
+				$this->mockQuotaFailure(), // query #2 attentempt #2 fail no quota
+				$this->mockSuccess(),	   // query #2 attentempt #3 success, response has rate_remaining of 123
+			);
+		$api->expects($this->exactly(2))->method('wait');
+
+		$response = $api->get('/test'); // ok but no remaining query
+		$this->assertTrue($response->hasSucceed());
+
+		$response = $api->get('/test2'); // will throttle
+		$this->assertTrue($response->hasSucceed());
 
 	}
 	

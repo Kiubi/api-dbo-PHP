@@ -22,8 +22,8 @@ class Api {
 	/** @var string  */
 	protected $access_token		= '';
 	
-	/** @var int  */
-	protected $rate_remaining	= 0;
+	/** @var int|null  */
+	protected $rate_remaining	= null;
 	
 	/** @var int  */
 	protected $timeout			= 3;
@@ -112,15 +112,6 @@ class Api {
 	 */
 	public function query(string $method, string $endpoint, $params = array(), $additional_headers = array()) {
 
-		if ($endpoint !== 'rate' && $this->rate_remaining == 0 && $this->autoThrottling) {
-			do {
-				$remaining = $this->getRateRemaining(true); // force check
-				if ($remaining == 0) {
-					sleep(5);
-				}
-			} while($remaining == 0);
-		}
-
 		$endpoint = ltrim($endpoint, '/');		
 		if (substr($endpoint, 0, strlen($this->api_version)+1)!=$this->api_version.'/') {
 			$endpoint = $this->api_version.'/'.$endpoint;
@@ -168,6 +159,7 @@ class Api {
 		
 		$result = $this->curlQuery($url, $method, $this->prepareHeaders($headers), $payload['body'] ?? '');
 		
+		// Network error
 		if ($result['success'] === false) {
 			if ($this->currentRetry < $this->maxRetry) {
 				$this->currentRetry++;
@@ -208,8 +200,18 @@ class Api {
 			default:
 			case 'application/json':
 				$response = $this->getJsonResponse($headers, $rawContent);
-				return $response;
 		}
+
+		// Quota error
+		if  ((
+				$response->getHttpCode() === 429 ||
+				($response->getHttpCode() === 403 && $response->getError()['code'] === 4300)
+			) && $this->autoThrottling) {
+			$this->wait();
+			return $this->performQuery($method, $url, $params, $additional_headers);
+		}
+		
+		return $response;		
 		
 	}
 
@@ -265,6 +267,14 @@ class Api {
 			'headers' => $headers,
 			'content' => $body
 		];
+	}
+
+	/**
+	 * @return void
+	 * @codeCoverageIgnore
+ 	*/
+	protected function wait() {
+		sleep(5);	
 	}
 	
 	/**
@@ -421,7 +431,7 @@ class Api {
 	 * @return int
 	 */
 	public function getRateRemaining(bool $remote_check = false) {
-		if ($remote_check || $this->rate_remaining === 0) {			
+		if ($remote_check || $this->rate_remaining === 0 || $this->rate_remaining === null) {			
 			$this->get('rate');
 		}
 		return $this->rate_remaining;
