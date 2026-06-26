@@ -157,61 +157,68 @@ class Api {
 			$headers = array_merge($headers, $payload['headers']);
 		}
 		
-		$result = $this->curlQuery($url, $method, $this->prepareHeaders($headers), $payload['body'] ?? '');
-		
-		// Network error
-		if ($result['success'] === false) {
-			if ($this->currentRetry < $this->maxRetry) {
-				$this->currentRetry++;
-				return $this->performQuery($method, $url, $params, $additional_headers);
-			}
-			$rawHeaders = 'Content-Type: application/json';
-			$rawContent = (string) json_encode(array(
-				'meta'=>array('success'=>false,'status_code'=>500),
-				'error'=>array('code'=>5007,'message'=>$result['error']) // 5007 == UNEXPECTED ERROR
-			)); // Mimic API Error
-		} else {
-			$rawHeaders = $result['headers'];
-			$rawContent = $result['content'];
-		}
-		$this->currentRetry = 0;
+		do {
+			$retry = false;
+			
+			$result = $this->curlQuery($url, $method, $this->prepareHeaders($headers), $payload['body'] ?? '');
 
-		$headers = array();
-		foreach(explode("\r\n", $rawHeaders) as $h) {
-			if (strlen($h) == 0) {
-				continue;
-			}
-			if (strpos($h, 'HTTP/') === 0) {
-				$h = explode(' ', $h, 3);
-				if (count($h) < 2) {
+			// Handle Network error and retry
+			if ($result['success'] === false) {
+				if ($this->currentRetry < $this->maxRetry) {
+					$this->currentRetry++;
+					$retry = true;
 					continue;
 				}
-				$h[1] = (int) $h[1];
+				$rawHeaders = 'Content-Type: application/json';
+				$rawContent = (string) json_encode(array(
+					'meta'=>array('success'=>false,'status_code'=>500),
+					'error'=>array('code'=>5007,'message'=>$result['error']) // 5007 == UNEXPECTED ERROR
+				)); // Mimic API Error
 			} else {
-				$h = explode(':', $h, 2);
-				if (count($h) != 2) {
-					continue;
-				}	
+				$rawHeaders = $result['headers'];
+				$rawContent = $result['content'];
 			}
-			$headers[trim((string) $h[0])] = trim((string) $h[1]);
-		}
-		
-		switch($headers['Content-Type'] ?? '') {
-			default:
-			case 'application/json':
-				$response = $this->getJsonResponse($headers, $rawContent);
-		}
+			$this->currentRetry = 0;
+			
+			// Parse Response
+			$headers = array();
+			foreach(explode("\r\n", $rawHeaders) as $h) {
+				if (strlen($h) == 0) {
+					continue;
+				}
+				if (strpos($h, 'HTTP/') === 0) {
+					$h = explode(' ', $h, 3);
+					if (count($h) < 2) {
+						continue;
+					}
+					$h[1] = (int) $h[1];
+				} else {
+					$h = explode(':', $h, 2);
+					if (count($h) != 2) {
+						continue;
+					}
+				}
+				$headers[trim((string) $h[0])] = trim((string) $h[1]);
+			}
 
-		// Quota error
-		if  ((
-				$response->getHttpCode() === 429 ||
-				($response->getHttpCode() === 403 && $response->getError()['code'] === 4300)
-			) && $this->autoThrottling) {
-			$this->wait();
-			return $this->performQuery($method, $url, $params, $additional_headers);
-		}
-		
-		return $response;		
+			switch($headers['Content-Type'] ?? '') {
+				default:
+				case 'application/json':
+					$response = $this->getJsonResponse($headers, $rawContent);
+			}
+
+			// Quota error
+			if  ((
+					$response->getHttpCode() === 429 ||
+					($response->getHttpCode() === 403 && $response->getError()['code'] === 4300)
+				) && $this->autoThrottling) {
+				$this->wait();
+				$retry = true;
+			}
+			
+		} while($retry);
+
+		return $response;
 		
 	}
 
