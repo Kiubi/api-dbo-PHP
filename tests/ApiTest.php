@@ -333,7 +333,7 @@ class ApiTest extends TestCase {
 	}
 	
 	
-	public function test_request_rate_remaining() {
+	public function test_request_rate_remaining() : void {
 
 		$api = $this->mockApi();
 		$api->expects($this->once()) // only one req
@@ -349,7 +349,7 @@ class ApiTest extends TestCase {
 		$this->assertEquals(123, $api->getRateRemaining()); // expect value from cache
 	}
 
-	public function test_rate_remaining_persistence() {
+	public function test_rate_remaining_persistence() : void  {
 
 		$api = $this->mockApi();
 		$api->expects($this->once()) // only one req
@@ -370,7 +370,7 @@ class ApiTest extends TestCase {
 		$this->assertEquals(123, $api->getRateRemaining()); // expect value from previous request
 	}
 	
-	public function test_access_token() {
+	public function test_access_token() : void  {
 		
 		$api = $this->mockApi();
 		$api->expects($this->once())
@@ -396,7 +396,7 @@ class ApiTest extends TestCase {
 		
 	}
 	
-	public function test_navigation() {
+	public function test_navigation() : void  {
 
 		$api = $this->mockApi();
 		$api->expects($this->once())
@@ -420,8 +420,11 @@ class ApiTest extends TestCase {
 		$this->assertTrue($api->hasPreviousPage($response));
 		
 	}
-	
-	
+
+
+	/**
+	 * @return array<array{0:string}>
+	 */
 	function providerNavigation() {
 		return [
 			['{"meta":{"success":true,"status_code":200,"rate_remaining":123,"link":{"next_page":"/test?limit=10&page=3","previous_page":"/test?limit=10&page=1","first_page":"/test?limit=10","last_page":"/test?limit=10&page=4"}},"data":{}}']
@@ -429,11 +432,11 @@ class ApiTest extends TestCase {
 	}
 
 	/**
-	 * @param $content
+	 * @param string $content
 	 * @return void
 	 * @dataProvider providerNavigation
 	 */
-	public function test_navigation_next($content) {
+	public function test_navigation_next(string $content) : void  {
 
 		$api = $this->mockApi();
 		$api->expects($this->once())
@@ -450,19 +453,20 @@ class ApiTest extends TestCase {
 				'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
 			]);
 
-		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], $content);
+		$response = new \Kiubi\Response(['HTTP/1.1'=>'200', 'Content-Type' => 'application/json'], $content);
 		
 		$responseNav = $api->getNextPage($response);
+		$this->assertInstanceOf(\Kiubi\Response::class, $responseNav);
 		$this->assertTrue($responseNav->hasSucceed());
 
 	}
 
 	/**
-	 * @param $content
+	 * @param string $content
 	 * @return void
 	 * @dataProvider providerNavigation
 	 */
-	public function test_navigation_previous($content) {
+	public function test_navigation_previous(string $content) : void  {
 
 		$api = $this->mockApi();
 		$api->expects($this->once())
@@ -479,19 +483,20 @@ class ApiTest extends TestCase {
 				'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
 			]);
 
-		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], $content);
+		$response = new \Kiubi\Response(['HTTP/1.1'=>'200', 'Content-Type' => 'application/json'], $content);
 
 		$responsePrev = $api->getPreviousPage($response);
+		$this->assertInstanceOf(\Kiubi\Response::class, $responsePrev);
 		$this->assertTrue($responsePrev->hasSucceed());
 
 	}
 
 	/**
-	 * @param $content
+	 * @param string $content
 	 * @return void
 	 * @dataProvider providerNavigation
 	 */
-	public function test_navigation_first($content) {
+	public function test_navigation_first(string $content) : void  {
 
 		$api = $this->mockApi();
 		$api->expects($this->once())
@@ -508,19 +513,20 @@ class ApiTest extends TestCase {
 				'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
 			]);
 
-		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], $content);
+		$response = new \Kiubi\Response(['HTTP/1.1'=>'200', 'Content-Type' => 'application/json'], $content);
 
 		$responseFirst = $api->getFirstPage($response);
+		$this->assertInstanceOf(\Kiubi\Response::class, $responseFirst);
 		$this->assertTrue($responseFirst->hasSucceed());
 
 	}
 
 	/**
-	 * @param $content
+	 * @param string $content
 	 * @return void
 	 * @dataProvider providerNavigation
 	 */
-	public function test_navigation_last($content) {
+	public function test_navigation_last(string $content) : void  {
 
 		$api = $this->mockApi();
 		$api->expects($this->once())
@@ -537,19 +543,20 @@ class ApiTest extends TestCase {
 				'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
 			]);
 
-		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], $content);
+		$response = new \Kiubi\Response(['HTTP/1.1'=>'200', 'Content-Type' => 'application/json'], $content);
 
 		$responseLast = $api->getLastPage($response);
+		$this->assertInstanceOf(\Kiubi\Response::class, $responseLast);
 		$this->assertTrue($responseLast->hasSucceed());
 
 	}
 
 	/**
-	 * @param $content
+	 * @param string $content
 	 * @return void
 	 * @dataProvider providerNavigation
 	 */
-	public function test_navigation_page($content) {
+	public function test_navigation_page(string $content) : void  {
 
 		$api = $this->mockApi();
 		$api->expects($this->once())
@@ -566,20 +573,21 @@ class ApiTest extends TestCase {
 				'content' => '{"meta":{"success":true,"status_code":200},"data":{}}'
 			]);
 
-		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], $content);
+		$response = new \Kiubi\Response(['HTTP/1.1'=>'200', 'Content-Type' => 'application/json'], $content);
 
 		$responseLast = $api->getPage($response, 123);
+		$this->assertInstanceOf(\Kiubi\Response::class, $responseLast);
 		$this->assertTrue($responseLast->hasSucceed());
 
 	}
 	
-	public function test_no_navigation() {
+	public function test_no_navigation() : void  {
 
 		$api = $this->mockApi();
 		$api->expects($this->never())
 			->method('curlQuery');
 
-		$response = new \Kiubi\Response(['HTTP/1.1 200 OK', 'Content-Type: application/json'], '{"meta":{"success":true,"status_code":200,"rate_remaining":123,"link":{}},"data":{}}');
+		$response = new \Kiubi\Response(['HTTP/1.1'=>'200', 'Content-Type' => 'application/json'], '{"meta":{"success":true,"status_code":200,"rate_remaining":123,"link":{}},"data":{}}');
 
 		$this->assertFalse($api->hasPreviousPage($response));
 		$this->assertFalse($api->hasNextPage($response));
@@ -592,7 +600,7 @@ class ApiTest extends TestCase {
 
 	}
 	
-	public function test_auto_retry_ok() {
+	public function test_auto_retry_ok() : void  {
 		
 		$api = $this->mockApi();
 
@@ -624,7 +632,7 @@ class ApiTest extends TestCase {
 		
 	}
 
-	public function test_auto_retry_fail() {
+	public function test_auto_retry_fail() : void  {
 
 		$api = $this->mockApi();
 
@@ -663,7 +671,7 @@ class ApiTest extends TestCase {
 
 	}
 
-	function test_fail_on_quota() {
+	function test_fail_on_quota() : void  {
 		
 		$api = $this->mockApi();
 		$api->setAutoThrottling(false); // no throttle
@@ -681,12 +689,11 @@ class ApiTest extends TestCase {
 		$response = $api->get('/test');
 
 		$this->assertFalse($response->hasSucceed());
-		$this->assertEquals(4300, $response->getError()['code']);
+		$this->assertEquals(4300, $response->getError()['code'] ?? null);
 		
 	}
 	
-	function test_manual_throttling() {
-		$this->assertTrue(true);
+	function test_manual_throttling() : void  {
 
 		$api = $this->mockApi();
 		$api->setAutoThrottling(false);
@@ -715,7 +722,7 @@ class ApiTest extends TestCase {
 		
 	}
 	
-	function test_auto_throttling() {
+	function test_auto_throttling() : void  {
 		
 		$api = $this->mockApi();
 
@@ -735,7 +742,7 @@ class ApiTest extends TestCase {
 
 		$api->expects($this->exactly(2))->method('wait');
 
-		$api->setAutoRetry(false);
+		$api->setAutoRetry(0);
 		$api->setAutoThrottling(true);
 		
 		$response = $api->get('/test');
@@ -745,7 +752,7 @@ class ApiTest extends TestCase {
 		
 	}
 
-	function test_auto_throttling_exhaustion() {
+	function test_auto_throttling_exhaustion() : void {
 		
 		$api = $this->mockApi();
 		$api->setAutoThrottling(true);

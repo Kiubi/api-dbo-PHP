@@ -157,8 +157,7 @@ class Api {
 			$headers = array_merge($headers, $payload['headers']);
 		}
 		
-		do {
-			$retry = false;
+		while(true) {
 			
 			$result = $this->curlQuery($url, $method, $this->prepareHeaders($headers), $payload['body'] ?? '');
 
@@ -166,7 +165,6 @@ class Api {
 			if ($result['success'] === false) {
 				if ($this->currentRetry < $this->maxRetry) {
 					$this->currentRetry++;
-					$retry = true;
 					continue;
 				}
 				$rawHeaders = 'Content-Type: application/json';
@@ -201,24 +199,21 @@ class Api {
 				$headers[trim((string) $h[0])] = trim((string) $h[1]);
 			}
 
-			switch($headers['Content-Type'] ?? '') {
-				default:
-				case 'application/json':
-					$response = $this->getJsonResponse($headers, $rawContent);
-			}
-
+			$response = $this->getJsonResponse($headers, $rawContent);
+			
 			// Quota error
+			$retryOnQuota = false;
 			if  ((
 					$response->getHttpCode() === 429 ||
-					($response->getHttpCode() === 403 && $response->getError()['code'] === 4300)
+					($response->getHttpCode() === 403 && ($response->getError()['code'] ?? null) === 4300)
 				) && $this->autoThrottling) {
 				$this->wait();
-				$retry = true;
+				$retryOnQuota = true;
 			}
-			
-		} while($retry);
 
-		return $response;
+			if (!$retryOnQuota) return $response;
+			
+		}
 		
 	}
 
@@ -441,7 +436,7 @@ class Api {
 		if ($remote_check || $this->rate_remaining === 0 || $this->rate_remaining === null) {			
 			$this->get('rate');
 		}
-		return $this->rate_remaining;
+		return (int) $this->rate_remaining;
 	}
 	
 	/**
