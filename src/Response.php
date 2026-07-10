@@ -38,14 +38,31 @@ class Response {
 		$this->headers = $headers;
 		reset($headers);
 		$http_code = (int) current($headers);
-		if ($http_code == 500 || $http_code == 413) { // payload are probably not well formed
+				
+		if (!isset($headers['Content-Type']) || $headers['Content-Type'] !== 'application/json') {
+			switch($http_code) {
+				case 413 :
+					$error_code = 4013;
+					$error_message = 'Requête trop large';
+					break;
+				case 503 :
+					$error_code = 5300;
+					$error_message = 'Maintenance en cours';
+					break;
+				default :
+					$http_code = 500;
+					$error_code = 5007; // 5007 == UNEXPECTED ERROR
+					$error_message = 'Unexpected error, payload not found in response';
+					break;
+			}
+			
 			$this->meta = array(
 				'success' => false,
 				'status_code' => $http_code
 			);
 			$this->error = array(
-				'code' => 5007, // 5007 == UNEXPECTED ERROR
-				'message' => 'Server error'
+				'code' => $error_code,
+				'message' => $error_message
 			);
 			$this->data = null;
 			return;

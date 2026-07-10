@@ -63,11 +63,11 @@ class ApiTest extends TestCase {
 	 * @param string $error
 	 * @return array<string, mixed>
 	 */
-	protected function mockFailure(string $error) : array {
+	protected function mockFailure(string $error, int $status = 400) : array {
 		return [
 			'success' => true,
-			'headers' => 'HTTP/1.1 400 OK'."\r\n".'Content-Type: application/json',
-			'content' => '{"meta":{"success":false,"status_code":400},"error":{"code":123,"message":"'.$error.'"}}'
+			'headers' => 'HTTP/1.1 '.$status.' OK'."\r\n".'Content-Type: application/json',
+			'content' => '{"meta":{"success":false,"status_code":'.$status.'},"error":{"code":123,"message":"'.$error.'"}}'
 		];
 	}
 
@@ -104,6 +104,10 @@ class ApiTest extends TestCase {
 		$this->assertEquals(200, $result->getHttpCode());
 		$this->assertEquals([], $result->getData());
 		$this->assertNull($result->getError());
+		$this->assertEquals([
+			'HTTP/1.1' => '200',
+    		'Content-Type' => 'application/json'
+		], $result->getHeaders());
 		
 	}
 
@@ -130,6 +134,129 @@ class ApiTest extends TestCase {
 		$this->assertEquals([
 			'code' => 123,
 			'message' => "ERROR"
+		], $result->getError());
+
+	}
+
+	public function test_simplest_server_error(): void {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/path'),
+				$this->equalTo('GET'),
+				$this->equalTo([
+					'X-API: Kiubi API PHP Client v3.0',
+					'Authorization: token TESTTOKEN'
+				]),
+				$this->equalTo(''),
+			)
+			->willReturn($this->mockFailure('ERROR', 500));
+
+		$result = $api->query('GET', '/path');
+
+		$this->assertTrue($result->hasFailed());
+		$this->assertEquals(500, $result->getHttpCode());
+		$this->assertEquals([
+			'code' => 123,
+			'message' => "ERROR"
+		], $result->getError());
+
+	}
+
+	public function test_simplest_unexpected_response_type(): void {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/path'),
+				$this->equalTo('GET'),
+				$this->equalTo([
+					'X-API: Kiubi API PHP Client v3.0',
+					'Authorization: token TESTTOKEN'
+				]),
+				$this->equalTo(''),
+			)
+			->willReturn([
+				'success' => true,
+				'headers' => 'HTTP/1.1 502 '."\r\n".'Content-Type: text/html',
+				'content' => '<h1>Proxy timeout<h1/>'
+			]);
+
+		$result = $api->query('GET', '/path');
+
+		$this->assertTrue($result->hasFailed());
+		$this->assertEquals(500, $result->getHttpCode());
+		
+		$this->assertEquals([
+			'code' => 5007,
+			'message' => 'Unexpected error, payload not found in response'
+		], $result->getError());
+		
+	}
+
+	public function test_simplest_invalid_response_payload(): void {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/path'),
+				$this->equalTo('GET'),
+				$this->equalTo([
+					'X-API: Kiubi API PHP Client v3.0',
+					'Authorization: token TESTTOKEN'
+				]),
+				$this->equalTo(''),
+			)
+			->willReturn([
+				'success' => true,
+				'headers' => 'HTTP/1.1 200 '."\r\n".'Content-Type: application/json',
+				'content' => 'CORRUPTED'
+			]);
+
+		$result = $api->query('GET', '/path');
+
+		$this->assertTrue($result->hasFailed());
+		$this->assertEquals(500, $result->getHttpCode());
+
+		$this->assertEquals([
+			'code' => 5007,
+			'message' => 'Unexpected error, payload not found in response'
+		], $result->getError());
+
+	}
+
+	public function test_simplest_maintenance_error(): void {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->with(
+				$this->equalTo('https://api.kiubi.com/v1/path'),
+				$this->equalTo('GET'),
+				$this->equalTo([
+					'X-API: Kiubi API PHP Client v3.0',
+					'Authorization: token TESTTOKEN'
+				]),
+				$this->equalTo(''),
+			)
+			->willReturn([
+				'success' => true,
+				'headers' => 'HTTP/1.1 503 '."\r\n".'Content-Type: text/html',
+				'content' => '<h1>Maintenance in progress<h1/>'
+			]);
+
+		$result = $api->query('GET', '/path');
+
+		$this->assertTrue($result->hasFailed());
+		$this->assertEquals(503, $result->getHttpCode());
+
+		$this->assertEquals([
+			'code' => 5300,
+			'message' => 'Maintenance en cours'
 		], $result->getError());
 
 	}
