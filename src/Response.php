@@ -83,9 +83,11 @@ class Response {
 			return;
 		}
         
-		$this->error = isset($content['error']) ? $content['error'] : array();
-		$this->meta = isset($content['meta']) ? $content['meta'] : array();
-		$this->data = isset($content['data']) ? $content['data'] : array();
+		$this->error = $content['error'] ?? array();
+		$this->meta = $content['meta'] ?? array();
+		if (!isset($this->meta['status_code'])) $this->meta['status_code'] = $http_code;
+		if (!isset($this->meta['success'])) $this->meta['success'] = false;
+		$this->data = $content['data'] ?? array();
 	}
 	
 	/**
