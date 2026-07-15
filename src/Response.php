@@ -1,33 +1,70 @@
-<?php
+<?php declare(strict_types=1);
 
 /**
- * @copyright Copyright (c) Kiubi 2021
+ * @copyright Copyright (c) Kiubi 2026
  */
  
 namespace Kiubi;
 
 class Response {
+
+	/**
+	 * @var array<string, mixed> 
+	 */
+	private $headers;
+
+	/**
+	 * @var array<string, mixed>
+	 */
+	private $error;
 	
-	private $headers = array();
-	private $error = array();
-	private $meta = array();
-	private $data = array();
+	/**
+	 * @var array<string, mixed>
+	 */
+	private $meta;
+
+	/**
+	 * @var mixed|null 
+	 */
+	private $data;
 
 	/**
 	 * Constructor
-	 * @param array $headers
-	 * @param String $content
+	 * @param array<string, mixed> $headers
+	 * @param string $content
 	 */
-	public function __construct($headers, $content) {
+	public function __construct(array $headers, string $content) {
 		
 		$this->headers = $headers;
 		reset($headers);
-		$http_code = current($headers);
-		if ($http_code == 500 || $http_code == 413) { // payload are probably not well formed
+		$http_code = (int) current($headers);
+				
+		if (!isset($headers['Content-Type']) || $headers['Content-Type'] !== 'application/json') {
+			switch($http_code) {
+				case 413 :
+					$error_code = 4013;
+					$error_message = 'Requête trop large';
+					break;
+				case 503 :
+					$error_code = 5300;
+					$error_message = 'Maintenance en cours';
+					break;
+				default :
+					$http_code = 500;
+					$error_code = 5007; // 5007 == UNEXPECTED ERROR
+					$error_message = 'Unexpected error, payload not found in response';
+					break;
+			}
+			
 			$this->meta = array(
 				'success' => false,
 				'status_code' => $http_code
 			);
+			$this->error = array(
+				'code' => $error_code,
+				'message' => $error_message
+			);
+			$this->data = null;
 			return;
 		}
 	
@@ -36,7 +73,7 @@ class Response {
 		if (!is_array($content)) {
 			$this->meta = array(
 				'success' => false,
-				'status_code'=>500
+				'status_code' => 500
 			);
 			$this->error = array(
 				'code' => 5007, // 5007 == UNEXPECTED ERROR
@@ -46,14 +83,16 @@ class Response {
 			return;
 		}
         
-		$this->error = isset($content['error']) ? $content['error'] : array();
-		$this->meta = isset($content['meta']) ? $content['meta'] : array();
-		$this->data = isset($content['data']) ? $content['data'] : array();
+		$this->error = $content['error'] ?? array();
+		$this->meta = $content['meta'] ?? array();
+		if (!isset($this->meta['status_code'])) $this->meta['status_code'] = $http_code;
+		if (!isset($this->meta['success'])) $this->meta['success'] = false;
+		$this->data = $content['data'] ?? array();
 	}
 	
 	/**
 	 * Returns HTTP headers
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function getHeaders() {
 		return $this->headers;
@@ -61,7 +100,7 @@ class Response {
 
 	/**
 	 * Return error if occurs
-	 * @return array
+	 * @return array<string, mixed>|null
 	 */
 	public function getError() {
 		if ($this->hasFailed()) {
@@ -72,7 +111,7 @@ class Response {
 	
 	/**
 	 * Return response meta data
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public function getMeta() {
 		return $this->meta;
@@ -80,7 +119,7 @@ class Response {
 	
 	/**
 	 * Returns response data
-	 * @return array
+	 * @return mixed|null
 	 */
 	public function getData() {
 		return $this->data;
@@ -95,7 +134,7 @@ class Response {
 	}
 	
 	/**
-	 * Determine if request has succeed
+	 * Determine if request has succeeded
 	 * @return Boolean
 	 */
 	public function hasSucceed() {
@@ -104,9 +143,9 @@ class Response {
 	
 	/**
 	 * Returns response HTTP code
-	 * @return Integer
+	 * @return int
 	 */
 	public function getHttpCode() {
-		return $this->meta['status_code'];
+		return (int) $this->meta['status_code'];
 	}
  }

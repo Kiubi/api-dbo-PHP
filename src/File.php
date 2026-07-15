@@ -1,14 +1,17 @@
-<?php 
+<?php declare(strict_types=1);
 
 /**
- * @copyright Copyright (c) Kiubi 2021
+ * @copyright Copyright (c) Kiubi 2026
  */
 
 namespace Kiubi;
 
 class File {
 	
+	/** @var string */
 	private $path;
+	
+	/** @var string */
 	private $mime;
 
 	/**
@@ -16,9 +19,9 @@ class File {
 	 * @param string $path Path of the file to send
 	 * @param string $mime Mime type of the file
 	 */
-	public function __construct($path, $mime = "application/octet-stream") {
-		$this->path = (string) $path;
-		$this->mime = (string) $mime;
+	public function __construct(string $path, string $mime = "application/octet-stream") {
+		$this->path = $path;
+		$this->mime = $mime;
 	}
 	
 	/**
@@ -48,11 +51,11 @@ class File {
 	
 	/**
 	 * Returns file content
-	 * @return string
+	 * @return false|string
 	 */
 	public function getContent() {
-		if (is_readable($this->path)) return file_get_contents($this->path);
-		else return "";
+		if (!is_readable($this->path)) return false;
+		return file_get_contents($this->path);
 	}
 	
 }
