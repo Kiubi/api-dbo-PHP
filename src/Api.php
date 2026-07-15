@@ -33,9 +33,6 @@ class Api {
 	
 	/** @var int  */
 	protected $maxRetry			= 0; // Disabled by default
-	
-	/** @var int  */
-	protected $currentRetry		= 0;
 
 	/**
 	 * Constructor
@@ -52,7 +49,7 @@ class Api {
 	 * @return void
 	 */
 	public function setAutoRetry(int $retry) {
-		$this->maxRetry = $retry;
+		$this->maxRetry = max (0, $retry);
 	}
 
 	/**
@@ -157,14 +154,16 @@ class Api {
 			$headers = array_merge($headers, $payload['headers']);
 		}
 		
+		$currentRetry = 0;
+		
 		while(true) {
 			
 			$result = $this->curlQuery($url, $method, $this->prepareHeaders($headers), $payload['body'] ?? '');
 
 			// Handle Network error and retry
 			if ($result['success'] === false) {
-				if ($this->currentRetry < $this->maxRetry) {
-					$this->currentRetry++;
+				if ($currentRetry < $this->maxRetry) {
+					$currentRetry++;
 					continue;
 				}
 				$rawHeaders = 'Content-Type: application/json';
@@ -176,7 +175,7 @@ class Api {
 				$rawHeaders = $result['headers'];
 				$rawContent = $result['content'];
 			}
-			$this->currentRetry = 0;
+			$currentRetry = 0;
 			
 			// Parse Response
 			$headers = array();
