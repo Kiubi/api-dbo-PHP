@@ -187,9 +187,10 @@ class Api {
 				if (strpos($h, 'HTTP/') === 0) {
 					$h = explode(' ', $h, 3);
 					if (count($h) < 2) {
-						continue;
+						$h = ['HTTP/1.1', 200];
+					} else {
+						$h[1] = (int) $h[1];
 					}
-					$h[1] = (int) $h[1];
 				} else {
 					$h = explode(':', $h, 2);
 					if (count($h) != 2) {

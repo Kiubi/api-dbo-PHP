@@ -111,6 +111,56 @@ class ApiTest extends TestCase {
 		
 	}
 
+	public function test_header_parsing(): void {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->willReturn([
+				'success' => true,
+				'headers' => 
+					'HTTP/1.1 200 OK'."\r\n".
+					'Content-Type: application/json'."\r\n".
+					'Invalid'."\r\n".
+					"\r\n".
+					'Test-Header:value=phpunit;name=test'."\r\n",
+				'content' => '{"meta":{"success":true,"status_code":200,"rate_remaining":999},"data":{}}'
+			]);
+
+		$result = $api->query('GET', '/path');
+
+		$this->assertTrue($result->hasSucceed());
+		$this->assertEquals([
+			'HTTP/1.1' => '200',
+			'Content-Type' => 'application/json',
+			'Test-Header' => 'value=phpunit;name=test',
+		], $result->getHeaders());
+
+	}
+
+	public function test_header_corrupted(): void {
+
+		$api = $this->mockApi();
+		$api->expects($this->once())
+			->method('curlQuery')
+			->willReturn([
+				'success' => true,
+				'headers' =>
+					'HTTP/Invalid'."\r\n".
+					'Content-Type: application/json'."\r\n",
+				'content' => '{"meta":{"success":true,"status_code":203,"rate_remaining":999},"data":{}}'
+			]);
+
+		$result = $api->query('GET', '/path');
+
+		$this->assertTrue($result->hasSucceed());
+		$this->assertEquals([
+			'HTTP/1.1' => '200',
+			'Content-Type' => 'application/json',
+		], $result->getHeaders());
+		$this->assertEquals(203, $result->getHttpCode());
+	}
+
 	public function test_simplest_ko_query(): void {
 
 		$api = $this->mockApi();
