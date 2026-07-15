@@ -82,11 +82,12 @@ class Api {
 	/**
 	 * Set connection timeout
 	 *
-	 * @param int $timeout
+	 * @param int $timeout. 0 for no limit
 	 * @return void
+	 * @codeCoverageIgnore
 	 */
 	public function setTimeout(int $timeout) {
-		$this->timeout = $timeout;
+		$this->timeout = max(0, $timeout);
 	}
 
 	/**
