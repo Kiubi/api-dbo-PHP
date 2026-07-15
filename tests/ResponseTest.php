@@ -4,8 +4,11 @@ use Kiubi\Response;
 use PHPUnit\Framework\TestCase;
 
 class ResponseTest extends TestCase {
-	
-	function providerMalformed() {
+
+	/**
+	 * @return array<int, list<array<string, int|string>|int|string>>
+	 */
+	function providerMalformed(): array {
 		return [
 			[[], '', 500, 5007],
 			[['HTTP 1.1' => 413], 'Too Large', 413, 4013],
@@ -17,23 +20,26 @@ class ResponseTest extends TestCase {
 	}
 
 	/**
-	 * @param $headers
+	 * @param array<string, string> $headers
 	 * @param $content
 	 * @param $expectedStatus
 	 * @param $expectedCode
 	 * @return void
 	 * @dataProvider providerMalformed
 	 */
-	function test_malformed($headers, $content, $expectedStatus, $expectedCode) {
+	function test_malformed(array $headers, string $content, int $expectedStatus, int $expectedCode): void {
 		
 		$Response = new Kiubi\Response($headers, $content);
 		
 		$this->assertEquals($expectedStatus, $Response->getHttpCode());
 		$this->assertTrue($Response->hasFailed());
-		$this->assertEquals($expectedCode, $Response->getError()['code']);
+		$this->assertEquals($expectedCode, $Response->getError()['code'] ?? null);
 	}
 
-	function providerValid() {
+	/**
+	 * @return array<int, array{array<string, int|string>|int|string}>
+	 */
+	function providerValid(): array {
 		return [
 			[['HTTP 1.1' => 200, 'Content-Type' => 'application/json'], '{"meta":{"success": true},"data":["test"]}', 200, ['test']],
 			[['HTTP 1.1' => 400, 'Content-Type' => 'application/json'], '{"meta":{"success": false},"data":["test"]}', 400, ['test']],
@@ -41,14 +47,14 @@ class ResponseTest extends TestCase {
 	}
 
 	/**
-	 * @param $headers
+	 * @param array<string, string> $headers
 	 * @param $content
 	 * @param $expectedStatus
 	 * @param $expectedCode
 	 * @return void
 	 * @dataProvider providerValid
 	 */
-	function test_valid($headers, $content, $expectedStatus, $expectedData) {
+	function test_valid(array $headers, string $content, int $expectedStatus, int $expectedData): void {
 
 		$Response = new Kiubi\Response($headers, $content);
 

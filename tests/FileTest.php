@@ -35,7 +35,7 @@ class FileTest extends TestCase {
 		return $path;
 	}
 
-	public function test_file() {
+	public function test_file(): void {
 		$tmpfile = $this->createTempFile('TEST');
 		$File = new \Kiubi\File($tmpfile);
 		$this->assertEquals('TEST', $File->getContent());
@@ -44,13 +44,13 @@ class FileTest extends TestCase {
 		$this->assertEquals(4, $File->getContentSize());
 	}
 	
-	public function test_explicit_content_type() {
+	public function test_explicit_content_type(): void {
 		$tmpfile = $this->createTempFile('<b>TEST</b>');
 		$File = new \Kiubi\File($tmpfile, 'text/html');
 		$this->assertEquals('text/html', $File->getContentType());
 	}
 	
-	public function test_unreadable_file() {
+	public function test_unreadable_file(): void {
 		$File = new \Kiubi\File('/tmp/doesnotexists');
 		$this->assertEquals('doesnotexists', $File->getFilename());
 		$this->assertEquals(false, $File->getContent());
