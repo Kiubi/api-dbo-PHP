@@ -1,6 +1,8 @@
 parameters:
     level: 8
-    phpVersion: 70333
+    phpVersion:
+        min: 70400
+        max: 80499
     paths:
         - src
         - tests
