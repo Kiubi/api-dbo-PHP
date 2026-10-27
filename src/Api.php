@@ -14,7 +14,7 @@ class Api {
 	protected $api_url			= 'https://api.kiubi.com';
 	
 	/** @var string */
-	protected $version			= '3.0';
+	protected $version			= '2.1.1';
 	
 	/** @var string  */
 	protected $api_version		= 'v1';
