@@ -50,11 +50,11 @@ class ResponseTest extends TestCase {
 	 * @param array<string, string> $headers
 	 * @param $content
 	 * @param $expectedStatus
-	 * @param $expectedCode
+	 * @param array<int, string> $expectedData
 	 * @return void
 	 * @dataProvider providerValid
 	 */
-	function test_valid(array $headers, string $content, int $expectedStatus, int $expectedData): void {
+	function test_valid(array $headers, string $content, int $expectedStatus, array $expectedData): void {
 
 		$Response = new Kiubi\Response($headers, $content);
 
